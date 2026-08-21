@@ -4,7 +4,11 @@ extends SceneTree
 const MAIN_SCENE: PackedScene = preload("res://main.tscn")
 const GAME_COMMAND_SCRIPT = preload("res://simulation/commands/game_command.gd")
 const COMMAND_RESULT_SCRIPT = preload("res://simulation/commands/command_result.gd")
+const START_PROJECT_COMMAND_SCRIPT = preload("res://simulation/commands/start_project_command.gd")
+const ADVANCE_QUARTER_COMMAND_SCRIPT = preload("res://simulation/commands/advance_quarter_command.gd")
 const SIMULATION_CLOCK_SCRIPT = preload("res://simulation/engine/simulation_clock.gd")
+const TICK_RESULT_SCRIPT = preload("res://simulation/engine/tick_result.gd")
+const SIMULATION_ENGINE_SCRIPT = preload("res://simulation/engine/simulation_engine.gd")
 const GAME_STATE_SCRIPT = preload("res://simulation/state/game_state.gd")
 const COMPANY_STATE_SCRIPT = preload("res://simulation/state/company_state.gd")
 const PROJECT_STATE_SCRIPT = preload("res://simulation/state/project_state.gd")
@@ -12,8 +16,14 @@ const FINANCE_SYSTEM_SCRIPT = preload("res://simulation/systems/finance_system.g
 const PROJECT_SYSTEM_SCRIPT = preload("res://simulation/systems/project_system.gd")
 const EFFECT_CONTRIBUTION_SCRIPT = preload("res://simulation/events/effect_contribution.gd")
 const EFFECT_BATCH_RESULT_SCRIPT = preload("res://simulation/events/effect_batch_result.gd")
+const GAME_SESSION_SCRIPT = preload("res://application/game_session.gd")
+const DASHBOARD_VIEW_MODEL_SCRIPT = preload("res://application/view_models/dashboard_view_model.gd")
+const DASHBOARD_SCRIPT = preload("res://ui/screens/dashboard.gd")
 const TEST_SIMULATION_CLOCK_SCRIPT = preload("res://tests/unit/test_simulation_clock.gd")
 const TEST_FINANCE_PROJECT_EFFECTS_SCRIPT = preload("res://tests/unit/test_finance_project_effects.gd")
+const TEST_QUARTER_SESSION_DASHBOARD_SCRIPT = preload(
+	"res://tests/integration/test_quarter_session_dashboard.gd"
+)
 
 var _pass_count: int = 0
 var _fail_count: int = 0
@@ -31,7 +41,11 @@ func _run_tests() -> void:
 
 	_check(GAME_COMMAND_SCRIPT != null, "GameCommand script is explicitly preloaded")
 	_check(COMMAND_RESULT_SCRIPT != null, "CommandResult script is explicitly preloaded")
+	_check(START_PROJECT_COMMAND_SCRIPT != null, "StartProjectCommand script is explicitly preloaded")
+	_check(ADVANCE_QUARTER_COMMAND_SCRIPT != null, "AdvanceQuarterCommand script is explicitly preloaded")
 	_check(SIMULATION_CLOCK_SCRIPT != null, "SimulationClock script is explicitly preloaded")
+	_check(TICK_RESULT_SCRIPT != null, "TickResult script is explicitly preloaded")
+	_check(SIMULATION_ENGINE_SCRIPT != null, "SimulationEngine script is explicitly preloaded")
 	_check(GAME_STATE_SCRIPT != null, "GameState script is explicitly preloaded")
 	_check(COMPANY_STATE_SCRIPT != null, "CompanyState script is explicitly preloaded")
 	_check(PROJECT_STATE_SCRIPT != null, "ProjectState script is explicitly preloaded")
@@ -39,6 +53,9 @@ func _run_tests() -> void:
 	_check(PROJECT_SYSTEM_SCRIPT != null, "ProjectSystem script is explicitly preloaded")
 	_check(EFFECT_CONTRIBUTION_SCRIPT != null, "EffectContribution script is explicitly preloaded")
 	_check(EFFECT_BATCH_RESULT_SCRIPT != null, "EffectBatchResult script is explicitly preloaded")
+	_check(GAME_SESSION_SCRIPT != null, "GameSession script is explicitly preloaded")
+	_check(DASHBOARD_VIEW_MODEL_SCRIPT != null, "DashboardViewModel script is explicitly preloaded")
+	_check(DASHBOARD_SCRIPT != null, "Dashboard script is explicitly preloaded")
 	_check(TEST_SIMULATION_CLOCK_SCRIPT != null, "Simulation clock unit suite is explicitly preloaded")
 	TEST_SIMULATION_CLOCK_SCRIPT.run(Callable(self, "_check"))
 	_check(
@@ -46,6 +63,11 @@ func _run_tests() -> void:
 		"Finance project effect unit suite is explicitly preloaded"
 	)
 	TEST_FINANCE_PROJECT_EFFECTS_SCRIPT.run(Callable(self, "_check"))
+	_check(
+		TEST_QUARTER_SESSION_DASHBOARD_SCRIPT != null,
+		"Quarter session dashboard integration suite is explicitly preloaded"
+	)
+	TEST_QUARTER_SESSION_DASHBOARD_SCRIPT.run(Callable(self, "_check"))
 
 	_check(MAIN_SCENE != null, "Main scene is explicitly preloaded")
 
@@ -66,32 +88,315 @@ func _run_tests() -> void:
 
 	_check(main_instance is Control, "Main scene root is Control")
 
-	var title_label: Label = main_instance.get_node_or_null(^"TitleLabel") as Label
-	var date_label: Label = main_instance.get_node_or_null(^"DateLabel") as Label
-	var start_button: Button = main_instance.get_node_or_null(^"StartButton") as Button
+	var dashboard_margin: MarginContainer = main_instance.get_node_or_null(
+		^"DashboardMargin"
+	) as MarginContainer
+	var dashboard: VBoxContainer = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard"
+	) as VBoxContainer
+	var title_label: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/Header/TitleLabel"
+	) as Label
+	var header_spacer: Control = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/Header/HeaderSpacer"
+	) as Control
+	var date_label: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/Header/DateLabel"
+	) as Label
+	var header_separator: HSeparator = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/HeaderSeparator"
+	) as HSeparator
+	var company_heading: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/CompanyHeading"
+	) as Label
+	var cash_label: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/FinanceGrid/CashLabel"
+	) as Label
+	var revenue_label: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/FinanceGrid/RevenueLabel"
+	) as Label
+	var operating_cost_label: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/FinanceGrid/OperatingCostLabel"
+	) as Label
+	var project_label: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/ProjectLabel"
+	) as Label
+	var project_heading: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/ProjectHeading"
+	) as Label
+	var primary_button: Button = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/PrimaryButton"
+	) as Button
+	var explanation_heading: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/ExplanationHeading"
+	) as Label
+	var cash_explanation_label: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/Explanation/CashReconciliationLabel"
+	) as Label
+	var revenue_contribution_label: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/Explanation/RevenueContributionLabel"
+	) as Label
+	var operating_cost_contribution_label: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/Explanation/OperatingCostContributionLabel"
+	) as Label
+	var project_cost_contribution_label: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/Explanation/ProjectCostContributionLabel"
+	) as Label
+	var progress_contribution_label: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/Explanation/ProgressContributionLabel"
+	) as Label
+	var completion_revenue_contribution_label: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/Explanation/CompletionRevenueContributionLabel"
+	) as Label
+	var body_spacer: Control = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/BodySpacer"
+	) as Control
 
-	_check(title_label != null, "TitleLabel exists and is a Label")
-	_check(date_label != null, "DateLabel exists and is a Label")
-	_check(start_button != null, "StartButton exists and is a Button")
-	_check(title_label != null and title_label.text == "AI COMPANY WAR", "Initial title is AI COMPANY WAR")
-	_check(date_label != null and date_label.text == "2026 Q1", "Initial date is 2026 Q1")
-	_check(start_button != null and start_button.text == "START GAME", "Initial button text is START GAME")
+	_check(dashboard_margin != null, "Dashboard uses a full-screen MarginContainer")
+	_check(dashboard != null, "Dashboard uses a VBoxContainer")
+	_check(title_label != null, "Dashboard TitleLabel exists")
+	_check(date_label != null, "Dashboard DateLabel exists")
+	_check(cash_label != null and revenue_label != null and operating_cost_label != null, "Dashboard finance labels exist")
+	_check(project_label != null, "Dashboard ProjectLabel exists")
+	_check(primary_button != null, "Dashboard PrimaryButton exists")
+	var initial_scene_exact: bool = (
+		title_label != null
+		and title_label.text == "AI COMPANY WAR"
+		and date_label != null
+		and date_label.text == "2026 Q1"
+		and cash_label != null
+		and cash_label.text == "Cash: 1,000,000 cents"
+		and revenue_label != null
+		and revenue_label.text == "Monthly revenue: 120,000 cents"
+		and operating_cost_label != null
+		and operating_cost_label.text == "Monthly operating cost: 80,000 cents"
+		and project_label != null
+		and project_label.text == "Project: project_alpha — NOT STARTED 0/3"
+		and primary_button != null
+		and primary_button.text == "START PROJECT"
+	)
+	_check(initial_scene_exact, "Dashboard initial fixed G1 fields are exact")
 
-	if start_button != null:
-		start_button.pressed.emit()
+	if primary_button != null:
+		primary_button.pressed.emit()
 	await process_frame
-	_check(start_button != null and start_button.text == "NEXT QUARTER", "First press changes button to NEXT QUARTER")
-	_check(date_label != null and date_label.text == "2026 Q1", "First press keeps date at 2026 Q1")
+	var first_press_exact: bool = (
+		date_label != null
+		and date_label.text == "2026 Q1"
+		and cash_label != null
+		and cash_label.text == "Cash: 1,000,000 cents"
+		and revenue_label != null
+		and revenue_label.text == "Monthly revenue: 120,000 cents"
+		and operating_cost_label != null
+		and operating_cost_label.text == "Monthly operating cost: 80,000 cents"
+		and project_label != null
+		and project_label.text == "Project: project_alpha — ACTIVE 0/3"
+		and primary_button != null
+		and primary_button.text == "NEXT QUARTER"
+	)
+	_check(first_press_exact, "First press starts only the fixed project")
 
-	if start_button != null:
-		start_button.pressed.emit()
+	if primary_button != null:
+		primary_button.pressed.emit()
 	await process_frame
-	_check(date_label != null and date_label.text == "2026 Q2", "Second press advances date to 2026 Q2")
-	_check(start_button != null and start_button.text == "NEXT QUARTER", "Second press keeps button at NEXT QUARTER")
+	var final_scene_exact: bool = (
+		date_label != null
+		and date_label.text == "2026 Q2"
+		and cash_label != null
+		and cash_label.text == "Cash: 1,075,000 cents"
+		and revenue_label != null
+		and revenue_label.text == "Monthly revenue: 150,000 cents"
+		and operating_cost_label != null
+		and operating_cost_label.text == "Monthly operating cost: 80,000 cents"
+		and project_label != null
+		and project_label.text == "Project: project_alpha — COMPLETED 3/3"
+		and primary_button != null
+		and primary_button.text == "NEXT QUARTER"
+		and cash_explanation_label != null
+		and cash_explanation_label.text
+			== "Cash: 1,000,000 → 1,075,000 = +75,000 cents"
+		and revenue_contribution_label != null
+		and revenue_contribution_label.text
+			== "Revenue cash contributions: +390,000 cents"
+		and operating_cost_contribution_label != null
+		and operating_cost_contribution_label.text
+			== "Operating-cost contributions: -240,000 cents"
+		and project_cost_contribution_label != null
+		and project_cost_contribution_label.text
+			== "Project-cost contributions: -75,000 cents"
+		and progress_contribution_label != null
+		and progress_contribution_label.text == "Project progress: +3 months"
+		and completion_revenue_contribution_label != null
+		and completion_revenue_contribution_label.text
+			== "Completion monthly revenue: +30,000 cents"
+	)
+	TEST_QUARTER_SESSION_DASHBOARD_SCRIPT.report_dashboard_scene(
+		Callable(self, "_check"),
+		initial_scene_exact and first_press_exact and final_scene_exact
+	)
+
+	var visible_controls: Array[Control] = [
+		title_label,
+		header_spacer,
+		date_label,
+		header_separator,
+		company_heading,
+		cash_label,
+		revenue_label,
+		operating_cost_label,
+		project_heading,
+		project_label,
+		primary_button,
+		explanation_heading,
+		cash_explanation_label,
+		revenue_contribution_label,
+		operating_cost_contribution_label,
+		project_cost_contribution_label,
+		progress_contribution_label,
+		completion_revenue_contribution_label,
+		body_spacer,
+	]
+	root.size = Vector2i(1280, 720)
+	(main_instance as Control).size = Vector2(1280, 720)
+	await process_frame
+	await process_frame
+	var fits_1280: bool = _dashboard_fits(
+		main_instance as Control,
+		dashboard_margin,
+		dashboard,
+		visible_controls,
+		Vector2i(1280, 720)
+	)
+	root.size = Vector2i(1920, 1080)
+	(main_instance as Control).size = Vector2(1920, 1080)
+	await process_frame
+	await process_frame
+	var fits_1920: bool = _dashboard_fits(
+		main_instance as Control,
+		dashboard_margin,
+		dashboard,
+		visible_controls,
+		Vector2i(1920, 1080)
+	)
+	TEST_QUARTER_SESSION_DASHBOARD_SCRIPT.report_dashboard_layout(
+		Callable(self, "_check"),
+		fits_1280 and fits_1920
+	)
 
 	main_instance.queue_free()
 	await process_frame
 	_finish()
+
+
+func _dashboard_fits(
+	main_control: Control,
+	dashboard_margin: MarginContainer,
+	dashboard: VBoxContainer,
+	visible_controls: Array[Control],
+	resolution: Vector2i
+) -> bool:
+	if main_control == null or dashboard_margin == null or dashboard == null:
+		print("[LAYOUT] Missing root layout node at %dx%d" % [resolution.x, resolution.y])
+		return false
+	var viewport_rect: Rect2 = Rect2(
+		Vector2.ZERO,
+		Vector2(resolution.x, resolution.y)
+	)
+	var main_rect: Rect2 = main_control.get_global_rect()
+	var margin_rect: Rect2 = dashboard_margin.get_global_rect()
+	if not viewport_rect.encloses(main_rect) or not viewport_rect.encloses(margin_rect):
+		print("[LAYOUT] Root containment failed at %dx%d: main=%s margin=%s" % [
+			resolution.x,
+			resolution.y,
+			main_rect,
+			margin_rect,
+		])
+		return false
+	if main_rect.size != Vector2(resolution.x, resolution.y):
+		print("[LAYOUT] Main size failed at %dx%d: %s" % [
+			resolution.x,
+			resolution.y,
+			main_rect.size,
+		])
+		return false
+	if margin_rect.size != Vector2(resolution.x, resolution.y):
+		print("[LAYOUT] Margin size failed at %dx%d: %s" % [
+			resolution.x,
+			resolution.y,
+			margin_rect.size,
+		])
+		return false
+	if not viewport_rect.encloses(dashboard.get_global_rect()):
+		print("[LAYOUT] Dashboard containment failed at %dx%d: %s" % [
+			resolution.x,
+			resolution.y,
+			dashboard.get_global_rect(),
+		])
+		return false
+	var dashboard_rect: Rect2 = dashboard.get_global_rect()
+	var dashboard_minimum: Vector2 = dashboard.get_combined_minimum_size()
+	if (
+		dashboard_rect.size.x < dashboard_minimum.x
+		or dashboard_rect.size.y < dashboard_minimum.y
+	):
+		print("[LAYOUT] Dashboard minimum size failed at %dx%d: rect=%s minimum=%s" % [
+			resolution.x,
+			resolution.y,
+			dashboard_rect,
+			dashboard_minimum,
+		])
+		return false
+	for control in visible_controls:
+		if control == null:
+			print("[LAYOUT] Missing visible control at %dx%d" % [resolution.x, resolution.y])
+			return false
+		if not control.visible:
+			print("[LAYOUT] Hidden control at %dx%d: %s" % [
+				resolution.x,
+				resolution.y,
+				control.name,
+			])
+			return false
+		var rect: Rect2 = control.get_global_rect()
+		var minimum: Vector2 = control.get_combined_minimum_size()
+		if rect.size.x <= 0.0 or rect.size.y <= 0.0:
+			print("[LAYOUT] Empty control at %dx%d: %s rect=%s" % [
+				resolution.x,
+				resolution.y,
+				control.name,
+				rect,
+			])
+			return false
+		if not viewport_rect.encloses(rect):
+			print("[LAYOUT] Control outside viewport at %dx%d: %s rect=%s" % [
+				resolution.x,
+				resolution.y,
+				control.name,
+				rect,
+			])
+			return false
+		if rect.size.x < minimum.x or rect.size.y < minimum.y:
+			print("[LAYOUT] Minimum size failed at %dx%d: %s rect=%s minimum=%s" % [
+				resolution.x,
+				resolution.y,
+				control.name,
+				rect,
+				minimum,
+			])
+			return false
+	for first_index in visible_controls.size():
+		for second_index in range(first_index + 1, visible_controls.size()):
+			var first_control: Control = visible_controls[first_index]
+			var second_control: Control = visible_controls[second_index]
+			if first_control.get_global_rect().intersects(second_control.get_global_rect()):
+				print("[LAYOUT] Controls overlap at %dx%d: %s and %s" % [
+					resolution.x,
+					resolution.y,
+					first_control.name,
+					second_control.name,
+				])
+				return false
+	return true
 
 
 func _check(condition: bool, description: String) -> void:

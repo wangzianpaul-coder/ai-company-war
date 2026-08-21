@@ -13,6 +13,11 @@ const _MAX_ELAPSED_MONTHS: int = 9_223_372_036_854_775_807
 var _elapsed_months: int = 0
 
 
+## Returns the complete elapsed-month value needed for an independent state copy.
+func get_elapsed_months() -> int:
+	return _elapsed_months
+
+
 ## Returns the calendar year derived only from elapsed integer months.
 @warning_ignore("integer_division")
 func get_year() -> int:

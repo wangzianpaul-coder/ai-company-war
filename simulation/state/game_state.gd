@@ -38,6 +38,17 @@ func _init(
 		)
 
 
+## Returns a fully independent copy preserving the complete owned state graph.
+func copy() -> GameState:
+	var copied_state: GameState = GameState.new(_company, _project)
+	var clock_copied: bool = copied_state.get_clock().advance_months(
+		_clock.get_elapsed_months()
+	)
+	if not clock_copied:
+		return null
+	return copied_state
+
+
 ## Returns the typed clock owned by this runtime state.
 func get_clock() -> SimulationClockType:
 	return _clock
