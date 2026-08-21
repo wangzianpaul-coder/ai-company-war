@@ -2,7 +2,7 @@
 schema: acw-current-task-v1
 task_id: TP-010
 packet: docs/task_packets/TP-010.md
-state: DRAFT_NOT_AUTHORIZED
+state: AWAITING_USER_ACCEPTANCE
 predecessor_task: TP-000
 base_commit: 8f04c176523cdc947478745557e264849d1f3d9a
 expected_handoff_commit_subject: "docs(workflow): add TP lifecycle and GitHub handoff protocol"

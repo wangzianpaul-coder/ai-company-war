@@ -2,6 +2,11 @@ extends SceneTree
 
 
 const MAIN_SCENE: PackedScene = preload("res://main.tscn")
+const GAME_COMMAND_SCRIPT = preload("res://simulation/commands/game_command.gd")
+const COMMAND_RESULT_SCRIPT = preload("res://simulation/commands/command_result.gd")
+const SIMULATION_CLOCK_SCRIPT = preload("res://simulation/engine/simulation_clock.gd")
+const GAME_STATE_SCRIPT = preload("res://simulation/state/game_state.gd")
+const TEST_SIMULATION_CLOCK_SCRIPT = preload("res://tests/unit/test_simulation_clock.gd")
 
 var _pass_count: int = 0
 var _fail_count: int = 0
@@ -16,6 +21,13 @@ func _run_tests() -> void:
 		_check(false, "Runner failure self-test")
 		_finish()
 		return
+
+	_check(GAME_COMMAND_SCRIPT != null, "GameCommand script is explicitly preloaded")
+	_check(COMMAND_RESULT_SCRIPT != null, "CommandResult script is explicitly preloaded")
+	_check(SIMULATION_CLOCK_SCRIPT != null, "SimulationClock script is explicitly preloaded")
+	_check(GAME_STATE_SCRIPT != null, "GameState script is explicitly preloaded")
+	_check(TEST_SIMULATION_CLOCK_SCRIPT != null, "Simulation clock unit suite is explicitly preloaded")
+	TEST_SIMULATION_CLOCK_SCRIPT.run(Callable(self, "_check"))
 
 	_check(MAIN_SCENE != null, "Main scene is explicitly preloaded")
 
