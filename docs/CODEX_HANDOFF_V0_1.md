@@ -9,9 +9,9 @@
 | Godot 项目根目录 | `D:/ai_company_war/game` |
 | 本文件权威路径 | `D:/ai_company_war/game/docs/CODEX_HANDOFF_V0_1.md` |
 | 阶段 A 状态 | 15 项 Decision Gate 已全部按推荐批准 |
-| 当前开发 Gate | `G0 / M0：Repository Safety Baseline` |
-| 当前可执行任务 | `TP-000：Git 与自动验证基线` |
-| 当前禁止事项 | 在 TP-000 验收前修改游戏逻辑、场景或项目配置 |
+| 当前开发状态 | 以实际仓库与 `docs/CURRENT_TASK.md` 为准；本文件不复制易漂移的当前 TP/Gate 状态 |
+| 当前任务指针 | `docs/CURRENT_TASK.md` |
+| 当前授权规则 | 只执行用户在当前 thread 明确批准的 Task Packet；自动生成的后继包不自行构成授权 |
 
 ## 权威性声明
 
@@ -21,6 +21,7 @@
 4. 实际仓库事实优先于文档中的历史快照。若文件、Git 状态、Godot 版本或用户修改与本文件不一致，先报告差异；不得为了让仓库“符合文档”而覆盖实际文件。
 5. 用户在当前任务中的最新明确要求永远高于本文件。若最新要求只让 Codex 评审、解释或规划，则本文件本身不构成写入授权。
 6. 本文件只维护一份权威副本。不要在 `D:/ai_company_war/docs` 或其他位置复制第二份，以免版本漂移。
+7. `AGENTS.md` 定义跨 thread 的读取、Task Packet 生命周期、交接和 GitHub push 工作流；`docs/CURRENT_TASK.md` 是唯一动态任务指针。两者不得改写本文件的产品与 Architecture Contract。
 
 ---
 
@@ -28,19 +29,19 @@
 
 当用户说“按照 handoff 执行”“开始当前任务”或同义指令时，Codex 必须按下列协议工作：
 
-1. 完整阅读本文件，不只读取 `TP-000`。
-2. 检查项目根、全部现有文件、`AGENTS.md`（如果后来出现）、Git 根与状态、Godot 精确版本、主场景和 renderer。
+1. 完整读取项目根 `AGENTS.md`、`docs/CURRENT_TASK.md` 和其指向的当前 Task Packet。首次进入项目、进入新 Gate、handoff 版本变化或发现冲突时完整阅读本文件；其他 TP 至少阅读任务包引用的本文件章节。
+2. 检查项目根、全部现有文件、Git 根与状态、remote/upstream、Godot 精确版本、主场景和 renderer。
 3. 明确区分：
    - `Repository Fact`：本次亲自核实的事实；
    - `Approved Decision`：用户已确认的产品/技术方向；
    - `Validation Hypothesis`：必须通过 Prototype 或试玩验证，不能包装成已证明事实；
    - `Current Authorization`：本次唯一允许执行的 Task Packet。
-4. 先给出简短执行计划，再只实施“当前可执行任务”。不得因为未来目录和架构已经写明，就一次性创建全部脚手架。
+4. 先给出简短执行计划，再只实施用户在当前 thread 明确授权且由 `CURRENT_TASK` 指向的 Task Packet。不得因为未来目录和架构已经写明，就一次性创建全部脚手架。
 5. 直接编辑获准的 `.gd`、`.tscn`、`.tres`、JSON、文档或项目配置；不得默认要求用户复制代码、逐个新建节点或手工连接 Signal。
 6. 修改前先建立当前 Task 要求的恢复点；保留用户已有文件与未知修改。
 7. 每完成一个小步骤就运行最窄的相关验证，任务末尾运行完整指定验证。
 8. 任何失败都必须保留原始错误、退出码和受影响文件。不得用扩大重构范围的方式掩盖失败。
-9. 达到当前 Gate 后停止，按第 12 节格式汇报。只建议下一任务，不自动执行下一任务。
+9. 当前 TP 真正通过后，按 `AGENTS.md` 生成唯一直接后继 Task Packet、更新动态指针、完成规定的 commit/push 并按第 12 节汇报；后继包保持未授权，当前 thread 不得执行它。
 
 总停止规则：
 
@@ -149,11 +150,11 @@ Briefing
 
 ## 1.7 当前开发目标
 
-当前只处于 `G0 / M0`：
+`G0 / M0` 已由本地 Git baseline 和 headless runner 完成：
 
-> 在不改变现有游戏行为的前提下，为项目建立 Git 恢复点、准确的运行说明和能以退出码判断成功/失败的最小自动验证入口。
+> baseline commit 为 `8f812aaaba3ea8185c3bad5639874dd0cc43173e`；TP-000 implementation commit 为 `8f04c176523cdc947478745557e264849d1f3d9a`。实际 HEAD 与远端状态始终以仓库和 `docs/CURRENT_TASK.md` 的重新核验为准。
 
-M0 不增加玩法。第一次新增现金、收入/成本、项目进度和纯模拟季度闭环属于后续 M1。训练/推理容量、两个市场和对手属于 M2。
+G1/M1 必须继续拆成窄 Task Packet，依次验证纯时间/状态边界、Finance/Project/Effect 和最小 UI 接入；训练/推理容量、两个市场和对手属于 M2。当前具体包和状态只看 `docs/CURRENT_TASK.md`。
 
 ---
 
@@ -171,9 +172,10 @@ M0 不增加玩法。第一次新增现金、收入/成本、项目进度和纯�
 | 主场景 | `res://main.tscn` |
 | Renderer | `GL Compatibility` |
 | 初期平台 | Windows PC / Steam |
-| Git | Workspace 和 `game` 当前均无 `.git` |
+| Git | `game` 已建立本地 `main`；TP-000 两个本地 commits 已存在；外层 Workspace 无 Git |
 | Git 客户端 | `git version 2.55.0.windows.4` 已安装 |
-| 测试 | 尚无 `tests/` 或测试 runner |
+| 测试 | `tests/run_tests.gd` 与 Godot 生成的 UID 已跟踪；正常路径退出 0、故障自检预期退出 1 |
+| GitHub | remote/upstream 与 push 状态属于动态仓库事实，只在 `docs/CURRENT_TASK.md` 记录并于每次开工重新核验 |
 | 插件 | 尚无 `addons/`、GDExtension 或第三方测试插件 |
 | 导出 | 尚无 `export_presets.cfg`，不得编造构建/Steam 导出命令 |
 
@@ -184,7 +186,7 @@ D:/ai_company_war/Godot_v4.7.1-stable_win64.exe
 D:/ai_company_war/Godot_v4.7.1-stable_win64_console.exe
 ~~~
 
-## 2.2 M0 开始前应存在的项目文件
+## 2.2 M0 开始前的历史文件基线
 
 ~~~text
 res://
@@ -231,22 +233,24 @@ Hash 不一致意味着“仓库在本文件后发生过变化”，不是自动
 
 ## 2.5 当前已验证的基线
 
-截至本文件生成时，以下检查已返回 0：
+TP-000 完成时，以下检查已通过：
 
 - Godot 精确版本查询；
 - Headless import；
 - `main.gd` `--check-only` 解析；
+- `tests/run_tests.gd` `--check-only` 解析与正常测试路径；
+- runner 故障自检按预期返回 1；
 - 指定 `res://main.tscn` 的 headless scene smoke；
 - 主项目 headless 启动。
 
-M0 仍必须重新运行这些命令。历史成功不等于本次修改通过。
+每个后续 TP 仍必须按自身任务包重新运行完整命令。历史成功不等于本次修改通过。
 
 ## 2.6 Codex 每次开工前必须重新检查
 
 1. 当前目录和 `project.godot` 的真实位置；
 2. 从项目目录向父级查找是否已有 Git 根；
 3. `git status`、未跟踪文件和用户修改；
-4. 是否出现 `AGENTS.md`、README 或更高优先级说明；
+4. 完整读取 `AGENTS.md`、README、`docs/CURRENT_TASK.md` 和当前 Task Packet；
 5. Godot 精确版本，而不仅是文件名；
 6. main scene、renderer 和项目配置；
 7. 当前文件列表与 Hash 差异；
@@ -545,11 +549,11 @@ res://
 │   └── game_root.gd
 ├── application/                      # G1+
 │   ├── game_session.gd               # UI 唯一业务入口
-│   ├── commands/
-│   │   ├── game_command.gd
-│   │   └── command_result.gd
 │   └── view_models/
 ├── simulation/                       # G1+
+│   ├── commands/                     # Domain-owned typed input/result contracts
+│   │   ├── game_command.gd
+│   │   └── command_result.gd
 │   ├── engine/
 │   │   ├── simulation_engine.gd      # 模拟门面
 │   │   ├── simulation_clock.gd
@@ -720,7 +724,7 @@ flowchart LR
 | TP-023 | 6 季度 Prototype、报告与批量仿真 | TP-022 通过后 |
 | TP-030+ | Vertical Slice UI、事件、开放策略、存档 | G2 试玩通过后 |
 
-每个任务完成后只建议下一项。不得在当前任务中预建后续空文件。
+每个任务真正完成后只生成一个直接后继 Task Packet 草案及其中的下一 thread prompt。该 Markdown 是交接产物，不是生产代码，也不构成后继任务的执行授权；当前 thread 不得执行它。不得批量生成路线或预建后续生产空文件。
 
 ## 7.4 Task Packet 必备字段
 
@@ -744,7 +748,9 @@ Stop Condition
 Required Completion Report
 ~~~
 
-## 7.5 当前唯一授权 Task：TP-000
+## 7.5 已完成的历史 Task：TP-000
+
+TP-000 已由上述两个本地 commits 完成，不得因本节仍保留其历史规格而重新执行。当前候选任务与授权状态只看 `docs/CURRENT_TASK.md` 和用户在当前 thread 的最新明确指令。
 
 ### TP-000 — Git Safety Baseline and Headless Test Entry
 
@@ -976,7 +982,7 @@ git -C 'D:/ai_company_war/game' status --short
 5. 显式暂存 `README.md`、`tests/run_tests.gd`，以及 Godot 已生成的 `tests/run_tests.gd.uid`。
 6. 再次审查 staged diff。
 7. 创建本地 commit：`test: add Godot headless baseline validation`。
-8. 确认工作树干净；不设置 remote，不 push。
+8. 确认工作树干净；TP-000 在其原始授权下不设置 remote、不 push。用户后来批准的 GitHub 工作流见项目根 `AGENTS.md`，可在 remote 经用户明确确认后推送这些既有 commits。
 9. 按第 12 节报告，并给用户手动启动步骤。
 10. 停止；不得在同一任务开始 TP-010/M1。
 
@@ -1191,9 +1197,9 @@ Suggested Narrow Next Step
 
 # 9. Git Safety Workflow
 
-## 9.1 首次建库授权
+## 9.1 TP-000 首次建库历史授权
 
-用户已批准 TP-000 在 `D:/ai_company_war/game` 初始化本地 Git 并建立 baseline commit。授权不包括：
+用户批准 TP-000 在 `D:/ai_company_war/game` 初始化本地 Git 并建立 baseline commit。以下是 TP-000 执行当时的历史边界，不应被误读为 TP-010+ 的永久 push 禁令：
 
 - 在外层 `D:/ai_company_war` 初始化 Git；
 - 添加 remote；
@@ -1227,7 +1233,7 @@ Suggested Narrow Next Step
 - 缺少 Git identity 时停止；不得擅自设置 global identity。
 - 发现已有用户 commit、branch、remote 或未提交修改时，保留并重新规划，不重写历史。
 - 每个 commit 前后运行最窄相关验证和 `git diff --check`。
-- 当前任务只创建本地 commit，不 push。
+- TP-000 原始执行只创建本地 commit，不 push；TP-010+ 按 `AGENTS.md` 的 GitHub safety boundary 执行。remote/upstream 缺失时仍必须停止并取得用户的精确目标授权。
 - 用户最新任务若明确要求不 commit，则保留 diff 并报告；最新用户指令优先。
 
 ---
@@ -1466,4 +1472,4 @@ TP-000 完成后，不直接开始 M1。先基于实际 M0 仓库生成 `TP-010`
 
 ---
 
-**当前最终指令：执行时只做 TP-000，完成后停止并汇报；不要自动开始 M1。**
+**当前动态指令：只执行 `docs/CURRENT_TASK.md` 指向且由用户在当前 thread 明确批准的 Task Packet。完成后只生成一个直接后继草案及交接 prompt，完成规定 commits/push 与报告，然后停止，不得实施后继任务。**

@@ -10,9 +10,20 @@
 - Renderer：GL Compatibility
 - 主场景：`res://main.tscn`
 - 权威实施说明：`D:/ai_company_war/game/docs/CODEX_HANDOFF_V0_1.md`
-- 当前开发 Gate：`G0 / M0`
+- 跨 thread 工作流：`D:/ai_company_war/game/AGENTS.md`
+- 当前任务指针：`D:/ai_company_war/game/docs/CURRENT_TASK.md`
+- 当前开发 Gate/Task：以实际仓库和 `D:/ai_company_war/game/docs/CURRENT_TASK.md` 为准
 
 未来功能必须先经过权威 handoff 和获准 Task Packet，不得从路线图直接提前实施。
+
+## Task Packet 工作流
+
+- 一个 Codex thread 只执行一个 Task Packet。
+- 每个新 thread 先读取 `AGENTS.md`、`docs/CURRENT_TASK.md` 和指向的 Task Packet。
+- 当前 TP 完成并通过必要人工验收后，Codex 生成唯一后继 Task Packet；后继文件内含可复制的下一 thread prompt。
+- 自动生成后继文件不等于授权或实施。用户手动把该 prompt 发到新 thread 才授权对应 TP。
+- 每个真正完成的 TP 必须提交并普通 push 到已确认的 GitHub upstream，随后核实远端 SHA；禁止 force-push 或自动改写/合并远端历史。
+- GitHub remote/upstream 的动态状态记录在 `docs/CURRENT_TASK.md`；每个 TP 开工前必须重新核验，缺失或分叉时停止。
 
 ## PowerShell 路径与版本检查
 
