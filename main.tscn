@@ -1,0 +1,43 @@
+[gd_scene format=3 uid="uid://b4cpoeqrcctw1"]
+
+[ext_resource type="Script" uid="uid://btxwngqr4t71f" path="res://main.gd" id="1_ig7tw"]
+
+[node name="Main" type="Control" unique_id=189007909]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_ig7tw")
+
+[node name="Background" type="ColorRect" parent="." unique_id=1122527376]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.19076231, 0.19076234, 0.19076231, 1)
+
+[node name="TitleLabel" type="Label" parent="." unique_id=1302499055]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0
+text = "AI COMPANY WAR"
+
+[node name="DateLabel" type="Label" parent="." unique_id=451900315]
+layout_mode = 0
+offset_left = 1083.0
+offset_top = 2.0
+offset_right = 1146.0
+offset_bottom = 25.0
+text = "2026 Q1"
+
+[node name="StartButton" type="Button" parent="." unique_id=285518357]
+layout_mode = 0
+offset_left = 495.0
+offset_top = 267.0
+offset_right = 601.0
+offset_bottom = 298.0
+text = "START GAME"
