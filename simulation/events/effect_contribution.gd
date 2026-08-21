@@ -6,22 +6,36 @@ extends RefCounted
 enum Unit {
 	CENTS,
 	MONTHS,
+	COMPUTE_UNIT_MONTHS,
 }
 
 const SOURCE_FINANCE: StringName = &"finance"
 const SOURCE_PROJECT: StringName = &"project"
+const SOURCE_COMPUTE: StringName = &"compute"
 
 const REASON_MONTHLY_REVENUE: StringName = &"monthly_revenue"
 const REASON_MONTHLY_OPERATING_COST: StringName = &"monthly_operating_cost"
 const REASON_PROJECT_MONTHLY_COST: StringName = &"project_monthly_cost"
 const REASON_PROJECT_PROGRESS: StringName = &"project_progress"
 const REASON_PROJECT_COMPLETION_REVENUE: StringName = &"project_completion_revenue"
+const REASON_TRAINING_WORK: StringName = &"training_work"
+const REASON_INFERENCE_SERVED: StringName = &"inference_served"
+const REASON_INFERENCE_UNMET: StringName = &"inference_unmet"
 
 const SUBJECT_COMPANY: StringName = &"company"
 
 const METRIC_CASH_CENTS: StringName = &"cash_cents"
 const METRIC_PROJECT_PROGRESS_MONTHS: StringName = &"project_progress_months"
 const METRIC_MONTHLY_REVENUE_CENTS: StringName = &"monthly_revenue_cents"
+const METRIC_CUMULATIVE_TRAINING_COMPUTE_UNIT_MONTHS: StringName = (
+	&"cumulative_training_compute_unit_months"
+)
+const METRIC_CUMULATIVE_SERVED_INFERENCE_COMPUTE_UNIT_MONTHS: StringName = (
+	&"cumulative_served_inference_compute_unit_months"
+)
+const METRIC_CUMULATIVE_UNMET_INFERENCE_COMPUTE_UNIT_MONTHS: StringName = (
+	&"cumulative_unmet_inference_compute_unit_months"
+)
 
 var _source_key: StringName
 var _reason_key: StringName

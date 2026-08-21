@@ -16,6 +16,13 @@ var _operating_cost_contributions_text: String
 var _project_cost_contributions_text: String
 var _progress_contributions_text: String
 var _completion_revenue_text: String
+var _compute_plan_text: String
+var _inference_workload_text: String
+var _training_allocation_units_per_month: int
+var _maximum_training_allocation_units_per_month: int
+var _training_work_text: String
+var _inference_served_text: String
+var _inference_unmet_text: String
 
 
 ## Stores primitive display values without exposing mutation methods.
@@ -33,7 +40,14 @@ func _init(
 	p_operating_cost_contributions_text: String,
 	p_project_cost_contributions_text: String,
 	p_progress_contributions_text: String,
-	p_completion_revenue_text: String
+	p_completion_revenue_text: String,
+	p_compute_plan_text: String,
+	p_inference_workload_text: String,
+	p_training_allocation_units_per_month: int,
+	p_maximum_training_allocation_units_per_month: int,
+	p_training_work_text: String,
+	p_inference_served_text: String,
+	p_inference_unmet_text: String
 ) -> void:
 	_title_text = p_title_text
 	_date_text = p_date_text
@@ -49,6 +63,15 @@ func _init(
 	_project_cost_contributions_text = p_project_cost_contributions_text
 	_progress_contributions_text = p_progress_contributions_text
 	_completion_revenue_text = p_completion_revenue_text
+	_compute_plan_text = p_compute_plan_text
+	_inference_workload_text = p_inference_workload_text
+	_training_allocation_units_per_month = p_training_allocation_units_per_month
+	_maximum_training_allocation_units_per_month = (
+		p_maximum_training_allocation_units_per_month
+	)
+	_training_work_text = p_training_work_text
+	_inference_served_text = p_inference_served_text
+	_inference_unmet_text = p_inference_unmet_text
 
 
 func get_title_text() -> String:
@@ -105,3 +128,31 @@ func get_progress_contributions_text() -> String:
 
 func get_completion_revenue_text() -> String:
 	return _completion_revenue_text
+
+
+func get_compute_plan_text() -> String:
+	return _compute_plan_text
+
+
+func get_inference_workload_text() -> String:
+	return _inference_workload_text
+
+
+func get_training_allocation_units_per_month() -> int:
+	return _training_allocation_units_per_month
+
+
+func get_maximum_training_allocation_units_per_month() -> int:
+	return _maximum_training_allocation_units_per_month
+
+
+func get_training_work_text() -> String:
+	return _training_work_text
+
+
+func get_inference_served_text() -> String:
+	return _inference_served_text
+
+
+func get_inference_unmet_text() -> String:
+	return _inference_unmet_text

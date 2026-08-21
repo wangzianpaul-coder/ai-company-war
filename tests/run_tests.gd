@@ -6,14 +6,19 @@ const GAME_COMMAND_SCRIPT = preload("res://simulation/commands/game_command.gd")
 const COMMAND_RESULT_SCRIPT = preload("res://simulation/commands/command_result.gd")
 const START_PROJECT_COMMAND_SCRIPT = preload("res://simulation/commands/start_project_command.gd")
 const ADVANCE_QUARTER_COMMAND_SCRIPT = preload("res://simulation/commands/advance_quarter_command.gd")
+const SET_COMPUTE_ALLOCATION_COMMAND_SCRIPT = preload(
+	"res://simulation/commands/set_compute_allocation_command.gd"
+)
 const SIMULATION_CLOCK_SCRIPT = preload("res://simulation/engine/simulation_clock.gd")
 const TICK_RESULT_SCRIPT = preload("res://simulation/engine/tick_result.gd")
 const SIMULATION_ENGINE_SCRIPT = preload("res://simulation/engine/simulation_engine.gd")
 const GAME_STATE_SCRIPT = preload("res://simulation/state/game_state.gd")
 const COMPANY_STATE_SCRIPT = preload("res://simulation/state/company_state.gd")
 const PROJECT_STATE_SCRIPT = preload("res://simulation/state/project_state.gd")
+const COMPUTE_STATE_SCRIPT = preload("res://simulation/state/compute_state.gd")
 const FINANCE_SYSTEM_SCRIPT = preload("res://simulation/systems/finance_system.gd")
 const PROJECT_SYSTEM_SCRIPT = preload("res://simulation/systems/project_system.gd")
+const COMPUTE_SYSTEM_SCRIPT = preload("res://simulation/systems/compute_system.gd")
 const EFFECT_CONTRIBUTION_SCRIPT = preload("res://simulation/events/effect_contribution.gd")
 const EFFECT_BATCH_RESULT_SCRIPT = preload("res://simulation/events/effect_batch_result.gd")
 const GAME_SESSION_SCRIPT = preload("res://application/game_session.gd")
@@ -23,6 +28,10 @@ const TEST_SIMULATION_CLOCK_SCRIPT = preload("res://tests/unit/test_simulation_c
 const TEST_FINANCE_PROJECT_EFFECTS_SCRIPT = preload("res://tests/unit/test_finance_project_effects.gd")
 const TEST_QUARTER_SESSION_DASHBOARD_SCRIPT = preload(
 	"res://tests/integration/test_quarter_session_dashboard.gd"
+)
+const TEST_COMPUTE_CAPACITY_SCRIPT = preload("res://tests/unit/test_compute_capacity.gd")
+const TEST_COMPUTE_SESSION_DASHBOARD_SCRIPT = preload(
+	"res://tests/integration/test_compute_session_dashboard.gd"
 )
 
 var _pass_count: int = 0
@@ -43,14 +52,20 @@ func _run_tests() -> void:
 	_check(COMMAND_RESULT_SCRIPT != null, "CommandResult script is explicitly preloaded")
 	_check(START_PROJECT_COMMAND_SCRIPT != null, "StartProjectCommand script is explicitly preloaded")
 	_check(ADVANCE_QUARTER_COMMAND_SCRIPT != null, "AdvanceQuarterCommand script is explicitly preloaded")
+	_check(
+		SET_COMPUTE_ALLOCATION_COMMAND_SCRIPT != null,
+		"SetComputeAllocationCommand script is explicitly preloaded"
+	)
 	_check(SIMULATION_CLOCK_SCRIPT != null, "SimulationClock script is explicitly preloaded")
 	_check(TICK_RESULT_SCRIPT != null, "TickResult script is explicitly preloaded")
 	_check(SIMULATION_ENGINE_SCRIPT != null, "SimulationEngine script is explicitly preloaded")
 	_check(GAME_STATE_SCRIPT != null, "GameState script is explicitly preloaded")
 	_check(COMPANY_STATE_SCRIPT != null, "CompanyState script is explicitly preloaded")
 	_check(PROJECT_STATE_SCRIPT != null, "ProjectState script is explicitly preloaded")
+	_check(COMPUTE_STATE_SCRIPT != null, "ComputeState script is explicitly preloaded")
 	_check(FINANCE_SYSTEM_SCRIPT != null, "FinanceSystem script is explicitly preloaded")
 	_check(PROJECT_SYSTEM_SCRIPT != null, "ProjectSystem script is explicitly preloaded")
+	_check(COMPUTE_SYSTEM_SCRIPT != null, "ComputeSystem script is explicitly preloaded")
 	_check(EFFECT_CONTRIBUTION_SCRIPT != null, "EffectContribution script is explicitly preloaded")
 	_check(EFFECT_BATCH_RESULT_SCRIPT != null, "EffectBatchResult script is explicitly preloaded")
 	_check(GAME_SESSION_SCRIPT != null, "GameSession script is explicitly preloaded")
@@ -68,6 +83,16 @@ func _run_tests() -> void:
 		"Quarter session dashboard integration suite is explicitly preloaded"
 	)
 	TEST_QUARTER_SESSION_DASHBOARD_SCRIPT.run(Callable(self, "_check"))
+	_check(
+		TEST_COMPUTE_CAPACITY_SCRIPT != null,
+		"Compute capacity unit suite is explicitly preloaded"
+	)
+	TEST_COMPUTE_CAPACITY_SCRIPT.run(Callable(self, "_check"))
+	_check(
+		TEST_COMPUTE_SESSION_DASHBOARD_SCRIPT != null,
+		"Compute session dashboard integration suite is explicitly preloaded"
+	)
+	TEST_COMPUTE_SESSION_DASHBOARD_SCRIPT.run(Callable(self, "_check"))
 
 	_check(MAIN_SCENE != null, "Main scene is explicitly preloaded")
 
@@ -121,6 +146,27 @@ func _run_tests() -> void:
 	var project_label: Label = main_instance.get_node_or_null(
 		^"DashboardMargin/Dashboard/ProjectLabel"
 	) as Label
+	var compute_heading: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/ComputeHeading"
+	) as Label
+	var compute_plan_label: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/ComputePlanLabel"
+	) as Label
+	var inference_workload_label: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/InferenceWorkloadLabel"
+	) as Label
+	var training_units_label: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/ComputePlanControls/TrainingUnitsLabel"
+	) as Label
+	var training_units_spin_box: SpinBox = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/ComputePlanControls/TrainingUnitsSpinBox"
+	) as SpinBox
+	var compute_plan_spacer: Control = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/ComputePlanControls/ComputePlanSpacer"
+	) as Control
+	var apply_compute_plan_button: Button = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/ComputePlanControls/ApplyComputePlanButton"
+	) as Button
 	var project_heading: Label = main_instance.get_node_or_null(
 		^"DashboardMargin/Dashboard/ProjectHeading"
 	) as Label
@@ -147,6 +193,15 @@ func _run_tests() -> void:
 	) as Label
 	var completion_revenue_contribution_label: Label = main_instance.get_node_or_null(
 		^"DashboardMargin/Dashboard/Explanation/CompletionRevenueContributionLabel"
+	) as Label
+	var training_work_label: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/Explanation/ComputeExplanationGrid/TrainingWorkLabel"
+	) as Label
+	var inference_served_label: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/Explanation/ComputeExplanationGrid/InferenceServedLabel"
+	) as Label
+	var inference_unmet_label: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/Explanation/ComputeExplanationGrid/InferenceUnmetLabel"
 	) as Label
 	var body_spacer: Control = main_instance.get_node_or_null(
 		^"DashboardMargin/Dashboard/BodySpacer"
@@ -176,6 +231,53 @@ func _run_tests() -> void:
 		and primary_button.text == "START PROJECT"
 	)
 	_check(initial_scene_exact, "Dashboard initial fixed G1 fields are exact")
+	var initial_compute_exact: bool = (
+		compute_heading != null
+		and compute_heading.text == "COMPUTE"
+		and compute_plan_label != null
+		and compute_plan_label.text
+			== "Compute/month: 100 = 40 training + 50 inference + 10 reserve"
+		and inference_workload_label != null
+		and inference_workload_label.text == "Inference workload: 50 units/month"
+		and training_units_label != null
+		and training_units_label.text == "Training units/month"
+		and training_units_spin_box != null
+		and int(training_units_spin_box.value) == 40
+		and int(training_units_spin_box.max_value) == 90
+		and apply_compute_plan_button != null
+		and apply_compute_plan_button.text == "APPLY COMPUTE PLAN"
+		and training_work_label != null
+		and training_work_label.text == "Training work: 0 compute-unit-months"
+		and inference_served_label != null
+		and inference_served_label.text == "Inference served: 0/0 compute-unit-months"
+		and inference_unmet_label != null
+		and inference_unmet_label.text == "Inference unmet: 0 compute-unit-months"
+	)
+
+	if training_units_spin_box != null:
+		training_units_spin_box.value = 70.0
+	if apply_compute_plan_button != null:
+		apply_compute_plan_button.pressed.emit()
+	await process_frame
+	var applied_compute_exact: bool = (
+		compute_plan_label != null
+		and compute_plan_label.text
+			== "Compute/month: 100 = 70 training + 20 inference + 10 reserve"
+		and date_label != null
+		and date_label.text == "2026 Q1"
+		and cash_label != null
+		and cash_label.text == "Cash: 1,000,000 cents"
+		and revenue_label != null
+		and revenue_label.text == "Monthly revenue: 120,000 cents"
+		and operating_cost_label != null
+		and operating_cost_label.text == "Monthly operating cost: 80,000 cents"
+		and project_label != null
+		and project_label.text == "Project: project_alpha — NOT STARTED 0/3"
+		and training_work_label != null
+		and training_work_label.text == "Training work: 0 compute-unit-months"
+		and inference_served_label != null
+		and inference_served_label.text == "Inference served: 0/0 compute-unit-months"
+	)
 
 	if primary_button != null:
 		primary_button.pressed.emit()
@@ -234,6 +336,21 @@ func _run_tests() -> void:
 		Callable(self, "_check"),
 		initial_scene_exact and first_press_exact and final_scene_exact
 	)
+	var final_compute_exact: bool = (
+		compute_plan_label != null
+		and compute_plan_label.text
+			== "Compute/month: 100 = 70 training + 20 inference + 10 reserve"
+		and training_work_label != null
+		and training_work_label.text == "Training work: +210 compute-unit-months"
+		and inference_served_label != null
+		and inference_served_label.text == "Inference served: 60/150 compute-unit-months"
+		and inference_unmet_label != null
+		and inference_unmet_label.text == "Inference unmet: 90 compute-unit-months"
+	)
+	TEST_COMPUTE_SESSION_DASHBOARD_SCRIPT.report_dashboard_scene(
+		Callable(self, "_check"),
+		initial_compute_exact and applied_compute_exact and final_compute_exact
+	)
 
 	var visible_controls: Array[Control] = [
 		title_label,
@@ -244,6 +361,13 @@ func _run_tests() -> void:
 		cash_label,
 		revenue_label,
 		operating_cost_label,
+		compute_heading,
+		compute_plan_label,
+		inference_workload_label,
+		training_units_label,
+		training_units_spin_box,
+		compute_plan_spacer,
+		apply_compute_plan_button,
 		project_heading,
 		project_label,
 		primary_button,
@@ -254,6 +378,9 @@ func _run_tests() -> void:
 		project_cost_contribution_label,
 		progress_contribution_label,
 		completion_revenue_contribution_label,
+		training_work_label,
+		inference_served_label,
+		inference_unmet_label,
 		body_spacer,
 	]
 	root.size = Vector2i(1280, 720)
@@ -279,6 +406,10 @@ func _run_tests() -> void:
 		Vector2i(1920, 1080)
 	)
 	TEST_QUARTER_SESSION_DASHBOARD_SCRIPT.report_dashboard_layout(
+		Callable(self, "_check"),
+		fits_1280 and fits_1920
+	)
+	TEST_COMPUTE_SESSION_DASHBOARD_SCRIPT.report_dashboard_layout(
 		Callable(self, "_check"),
 		fits_1280 and fits_1920
 	)

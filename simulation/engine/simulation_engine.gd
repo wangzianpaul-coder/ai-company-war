@@ -4,6 +4,7 @@ extends RefCounted
 
 const GameStateType = preload("res://simulation/state/game_state.gd")
 const ProjectSystemType = preload("res://simulation/systems/project_system.gd")
+const ComputeSystemType = preload("res://simulation/systems/compute_system.gd")
 const FinanceSystemType = preload("res://simulation/systems/finance_system.gd")
 const EffectContributionType = preload("res://simulation/events/effect_contribution.gd")
 const EffectBatchResultType = preload("res://simulation/events/effect_batch_result.gd")
@@ -26,7 +27,27 @@ func start_project(input_state: GameStateType) -> TickResultType:
 	return TickResultType.new(working_state, project_result.get_contributions())
 
 
-## Runs exactly three Project, Finance, Clock months on an independent working copy.
+## Changes the training split on an independent working copy with no monthly effects.
+func set_compute_allocation(
+	input_state: GameStateType,
+	training_units_per_month: int
+) -> TickResultType:
+	if input_state == null:
+		return _failed_result()
+	var working_state: GameStateType = input_state.copy()
+	if working_state == null:
+		return _failed_result()
+
+	var allocation_result: EffectBatchResultType = ComputeSystemType.new().set_training_allocation(
+		working_state.get_compute(),
+		training_units_per_month
+	)
+	if not allocation_result.is_successful():
+		return _failed_result()
+	return TickResultType.new(working_state, allocation_result.get_contributions())
+
+
+## Runs exactly three Project, Compute, Finance, Clock months on an isolated copy.
 func advance_quarter(input_state: GameStateType) -> TickResultType:
 	if input_state == null:
 		return _failed_result()
@@ -35,6 +56,7 @@ func advance_quarter(input_state: GameStateType) -> TickResultType:
 		return _failed_result()
 
 	var project_system: ProjectSystemType = ProjectSystemType.new()
+	var compute_system: ComputeSystemType = ComputeSystemType.new()
 	var finance_system: FinanceSystemType = FinanceSystemType.new()
 	var contributions: Array[EffectContributionType] = []
 	for _month_index in 3:
@@ -45,6 +67,13 @@ func advance_quarter(input_state: GameStateType) -> TickResultType:
 		if not project_result.is_successful():
 			return _failed_result()
 		_append_contributions(contributions, project_result.get_contributions())
+
+		var compute_result: EffectBatchResultType = compute_system.advance_month(
+			working_state.get_compute()
+		)
+		if not compute_result.is_successful():
+			return _failed_result()
+		_append_contributions(contributions, compute_result.get_contributions())
 
 		var finance_result: EffectBatchResultType = finance_system.settle_month(
 			working_state.get_company()

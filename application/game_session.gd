@@ -6,12 +6,16 @@ const GameCommandType = preload("res://simulation/commands/game_command.gd")
 const CommandResultType = preload("res://simulation/commands/command_result.gd")
 const StartProjectCommandType = preload("res://simulation/commands/start_project_command.gd")
 const AdvanceQuarterCommandType = preload("res://simulation/commands/advance_quarter_command.gd")
+const SetComputeAllocationCommandType = preload(
+	"res://simulation/commands/set_compute_allocation_command.gd"
+)
 const SimulationEngineType = preload("res://simulation/engine/simulation_engine.gd")
 const TickResultType = preload("res://simulation/engine/tick_result.gd")
 const SimulationClockType = preload("res://simulation/engine/simulation_clock.gd")
 const GameStateType = preload("res://simulation/state/game_state.gd")
 const CompanyStateType = preload("res://simulation/state/company_state.gd")
 const ProjectStateType = preload("res://simulation/state/project_state.gd")
+const ComputeStateType = preload("res://simulation/state/compute_state.gd")
 const EffectContributionType = preload("res://simulation/events/effect_contribution.gd")
 const DashboardViewModelType = preload("res://application/view_models/dashboard_view_model.gd")
 const MAX_SIGNED_INT: int = 9_223_372_036_854_775_807
@@ -35,7 +39,7 @@ func _init(p_initial_state: GameStateType) -> void:
 	_current_view_model = _build_view_model(_active_state, no_contributions)
 
 
-## Accepts only the two concrete G1 commands and publishes only complete success.
+## Accepts only the three concrete commands and publishes only complete success.
 func submit_command(command: GameCommandType) -> CommandResultType:
 	if command == null:
 		return CommandResultType.new(false)
@@ -45,6 +49,14 @@ func submit_command(command: GameCommandType) -> CommandResultType:
 		tick_result = _engine.start_project(_active_state)
 	elif command.get_script() == AdvanceQuarterCommandType:
 		tick_result = _engine.advance_quarter(_active_state)
+	elif command.get_script() == SetComputeAllocationCommandType:
+		var allocation_command: SetComputeAllocationCommandType = (
+			command as SetComputeAllocationCommandType
+		)
+		tick_result = _engine.set_compute_allocation(
+			_active_state,
+			allocation_command.get_training_units_per_month()
+		)
 	else:
 		return CommandResultType.new(false)
 
@@ -98,8 +110,13 @@ func _build_view_model(
 	var cash_delta_cents: int = 0
 	var progress_months: int = 0
 	var completion_revenue_cents: int = 0
+	var training_work_compute_unit_months: int = 0
+	var served_inference_compute_unit_months: int = 0
+	var unmet_inference_compute_unit_months: int = 0
 	for contribution in contributions:
+		var source_key: StringName = contribution.get_source_key()
 		var reason_key: StringName = contribution.get_reason_key()
+		var subject_key: StringName = contribution.get_subject_key()
 		var metric_key: StringName = contribution.get_metric_key()
 		var unit: int = contribution.get_unit()
 		var delta: int = contribution.get_delta()
@@ -138,9 +155,52 @@ func _build_view_model(
 			if not _can_add(completion_revenue_cents, delta):
 				return null
 			completion_revenue_cents += delta
+		elif (
+			source_key == EffectContributionType.SOURCE_COMPUTE
+			and reason_key == EffectContributionType.REASON_TRAINING_WORK
+			and subject_key == EffectContributionType.SUBJECT_COMPANY
+			and metric_key
+				== EffectContributionType.METRIC_CUMULATIVE_TRAINING_COMPUTE_UNIT_MONTHS
+			and unit == EffectContributionType.Unit.COMPUTE_UNIT_MONTHS
+		):
+			if not _can_add(training_work_compute_unit_months, delta):
+				return null
+			training_work_compute_unit_months += delta
+		elif (
+			source_key == EffectContributionType.SOURCE_COMPUTE
+			and reason_key == EffectContributionType.REASON_INFERENCE_SERVED
+			and subject_key == EffectContributionType.SUBJECT_COMPANY
+			and metric_key
+				== EffectContributionType.METRIC_CUMULATIVE_SERVED_INFERENCE_COMPUTE_UNIT_MONTHS
+			and unit == EffectContributionType.Unit.COMPUTE_UNIT_MONTHS
+		):
+			if not _can_add(served_inference_compute_unit_months, delta):
+				return null
+			served_inference_compute_unit_months += delta
+		elif (
+			source_key == EffectContributionType.SOURCE_COMPUTE
+			and reason_key == EffectContributionType.REASON_INFERENCE_UNMET
+			and subject_key == EffectContributionType.SUBJECT_COMPANY
+			and metric_key
+				== EffectContributionType.METRIC_CUMULATIVE_UNMET_INFERENCE_COMPUTE_UNIT_MONTHS
+			and unit == EffectContributionType.Unit.COMPUTE_UNIT_MONTHS
+		):
+			if not _can_add(unmet_inference_compute_unit_months, delta):
+				return null
+			unmet_inference_compute_unit_months += delta
+
+	if not _can_add(
+		served_inference_compute_unit_months,
+		unmet_inference_compute_unit_months
+	):
+		return null
+	var inference_workload_compute_unit_months: int = (
+		served_inference_compute_unit_months + unmet_inference_compute_unit_months
+	)
 
 	var company: CompanyStateType = state.get_company()
 	var project: ProjectStateType = state.get_project()
+	var compute: ComputeStateType = state.get_compute()
 	var clock: SimulationClockType = state.get_clock()
 	var cash_after_cents: int = company.get_cash_cents()
 	if not _can_subtract(cash_after_cents, cash_delta_cents):
@@ -190,6 +250,27 @@ func _build_view_model(
 		"Project progress: %s months" % _format_signed_integer(progress_months),
 		"Completion monthly revenue: %s cents" % _format_signed_integer(
 			completion_revenue_cents
+		),
+		"Compute/month: %s = %s training + %s inference + %s reserve" % [
+			_format_integer(compute.get_total_units_per_month()),
+			_format_integer(compute.get_training_allocation_units_per_month()),
+			_format_integer(compute.get_inference_allocation_units_per_month()),
+			_format_integer(compute.get_reserve_units_per_month()),
+		],
+		"Inference workload: %s units/month" % _format_integer(
+			compute.get_inference_workload_units_per_month()
+		),
+		compute.get_training_allocation_units_per_month(),
+		compute.get_allocatable_capacity_units_per_month(),
+		"Training work: %s compute-unit-months" % _format_signed_integer(
+			training_work_compute_unit_months
+		),
+		"Inference served: %s/%s compute-unit-months" % [
+			_format_integer(served_inference_compute_unit_months),
+			_format_integer(inference_workload_compute_unit_months),
+		],
+		"Inference unmet: %s compute-unit-months" % _format_integer(
+			unmet_inference_compute_unit_months
 		)
 	)
 

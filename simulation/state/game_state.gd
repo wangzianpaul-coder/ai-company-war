@@ -5,16 +5,19 @@ extends RefCounted
 const SimulationClockType = preload("res://simulation/engine/simulation_clock.gd")
 const CompanyStateType = preload("res://simulation/state/company_state.gd")
 const ProjectStateType = preload("res://simulation/state/project_state.gd")
+const ComputeStateType = preload("res://simulation/state/compute_state.gd")
 
 var _clock: SimulationClockType
 var _company: CompanyStateType
 var _project: ProjectStateType
+var _compute: ComputeStateType
 
 
 ## Owns independent typed state. Optional inputs are copied, never shared.
 func _init(
 	p_company: CompanyStateType = null,
-	p_project: ProjectStateType = null
+	p_project: ProjectStateType = null,
+	p_compute: ComputeStateType = null
 ) -> void:
 	_clock = SimulationClockType.new()
 	if p_company == null:
@@ -36,11 +39,15 @@ func _init(
 			p_project.get_lifecycle(),
 			p_project.get_progress_months()
 		)
+	if p_compute == null:
+		_compute = ComputeStateType.new()
+	else:
+		_compute = p_compute.copy()
 
 
 ## Returns a fully independent copy preserving the complete owned state graph.
 func copy() -> GameState:
-	var copied_state: GameState = GameState.new(_company, _project)
+	var copied_state: GameState = GameState.new(_company, _project, _compute)
 	var clock_copied: bool = copied_state.get_clock().advance_months(
 		_clock.get_elapsed_months()
 	)
@@ -62,3 +69,8 @@ func get_company() -> CompanyStateType:
 ## Returns the single typed project slot owned by this runtime state.
 func get_project() -> ProjectStateType:
 	return _project
+
+
+## Returns the typed shared monthly capacity state owned by this runtime state.
+func get_compute() -> ComputeStateType:
+	return _compute

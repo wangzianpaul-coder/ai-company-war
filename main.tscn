@@ -30,13 +30,13 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/margin_left = 64
-theme_override_constants/margin_top = 40
+theme_override_constants/margin_top = 24
 theme_override_constants/margin_right = 64
-theme_override_constants/margin_bottom = 40
+theme_override_constants/margin_bottom = 24
 
 [node name="Dashboard" type="VBoxContainer" parent="DashboardMargin"]
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 8
 script = ExtResource("2_dashboard")
 
 [node name="Header" type="HBoxContainer" parent="DashboardMargin/Dashboard"]
@@ -84,6 +84,47 @@ layout_mode = 2
 size_flags_horizontal = 3
 text = "Monthly operating cost: 80,000 cents"
 
+[node name="ComputeHeading" type="Label" parent="DashboardMargin/Dashboard"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "COMPUTE"
+
+[node name="ComputePlanLabel" type="Label" parent="DashboardMargin/Dashboard"]
+layout_mode = 2
+text = "Compute/month: 100 = 40 training + 50 inference + 10 reserve"
+
+[node name="InferenceWorkloadLabel" type="Label" parent="DashboardMargin/Dashboard"]
+layout_mode = 2
+text = "Inference workload: 50 units/month"
+
+[node name="ComputePlanControls" type="HBoxContainer" parent="DashboardMargin/Dashboard"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="TrainingUnitsLabel" type="Label" parent="DashboardMargin/Dashboard/ComputePlanControls"]
+layout_mode = 2
+text = "Training units/month"
+vertical_alignment = 1
+
+[node name="TrainingUnitsSpinBox" type="SpinBox" parent="DashboardMargin/Dashboard/ComputePlanControls"]
+custom_minimum_size = Vector2(120, 40)
+layout_mode = 2
+max_value = 90.0
+step = 1.0
+value = 40.0
+allow_greater = false
+allow_lesser = false
+rounded = true
+
+[node name="ComputePlanSpacer" type="Control" parent="DashboardMargin/Dashboard/ComputePlanControls"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ApplyComputePlanButton" type="Button" parent="DashboardMargin/Dashboard/ComputePlanControls"]
+custom_minimum_size = Vector2(220, 40)
+layout_mode = 2
+text = "APPLY COMPUTE PLAN"
+
 [node name="ProjectHeading" type="Label" parent="DashboardMargin/Dashboard"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
@@ -105,7 +146,7 @@ text = "QUARTER EXPLANATION"
 
 [node name="Explanation" type="VBoxContainer" parent="DashboardMargin/Dashboard"]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 4
 
 [node name="CashReconciliationLabel" type="Label" parent="DashboardMargin/Dashboard/Explanation"]
 layout_mode = 2
@@ -130,6 +171,25 @@ text = "Project progress: 0 months"
 [node name="CompletionRevenueContributionLabel" type="Label" parent="DashboardMargin/Dashboard/Explanation"]
 layout_mode = 2
 text = "Completion monthly revenue: 0 cents"
+
+[node name="ComputeExplanationGrid" type="GridContainer" parent="DashboardMargin/Dashboard/Explanation"]
+layout_mode = 2
+columns = 3
+
+[node name="TrainingWorkLabel" type="Label" parent="DashboardMargin/Dashboard/Explanation/ComputeExplanationGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Training work: 0 compute-unit-months"
+
+[node name="InferenceServedLabel" type="Label" parent="DashboardMargin/Dashboard/Explanation/ComputeExplanationGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Inference served: 0/0 compute-unit-months"
+
+[node name="InferenceUnmetLabel" type="Label" parent="DashboardMargin/Dashboard/Explanation/ComputeExplanationGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Inference unmet: 0 compute-unit-months"
 
 [node name="BodySpacer" type="Control" parent="DashboardMargin/Dashboard"]
 layout_mode = 2
