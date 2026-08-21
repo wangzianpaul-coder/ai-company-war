@@ -6,7 +6,14 @@ const GAME_COMMAND_SCRIPT = preload("res://simulation/commands/game_command.gd")
 const COMMAND_RESULT_SCRIPT = preload("res://simulation/commands/command_result.gd")
 const SIMULATION_CLOCK_SCRIPT = preload("res://simulation/engine/simulation_clock.gd")
 const GAME_STATE_SCRIPT = preload("res://simulation/state/game_state.gd")
+const COMPANY_STATE_SCRIPT = preload("res://simulation/state/company_state.gd")
+const PROJECT_STATE_SCRIPT = preload("res://simulation/state/project_state.gd")
+const FINANCE_SYSTEM_SCRIPT = preload("res://simulation/systems/finance_system.gd")
+const PROJECT_SYSTEM_SCRIPT = preload("res://simulation/systems/project_system.gd")
+const EFFECT_CONTRIBUTION_SCRIPT = preload("res://simulation/events/effect_contribution.gd")
+const EFFECT_BATCH_RESULT_SCRIPT = preload("res://simulation/events/effect_batch_result.gd")
 const TEST_SIMULATION_CLOCK_SCRIPT = preload("res://tests/unit/test_simulation_clock.gd")
+const TEST_FINANCE_PROJECT_EFFECTS_SCRIPT = preload("res://tests/unit/test_finance_project_effects.gd")
 
 var _pass_count: int = 0
 var _fail_count: int = 0
@@ -26,8 +33,19 @@ func _run_tests() -> void:
 	_check(COMMAND_RESULT_SCRIPT != null, "CommandResult script is explicitly preloaded")
 	_check(SIMULATION_CLOCK_SCRIPT != null, "SimulationClock script is explicitly preloaded")
 	_check(GAME_STATE_SCRIPT != null, "GameState script is explicitly preloaded")
+	_check(COMPANY_STATE_SCRIPT != null, "CompanyState script is explicitly preloaded")
+	_check(PROJECT_STATE_SCRIPT != null, "ProjectState script is explicitly preloaded")
+	_check(FINANCE_SYSTEM_SCRIPT != null, "FinanceSystem script is explicitly preloaded")
+	_check(PROJECT_SYSTEM_SCRIPT != null, "ProjectSystem script is explicitly preloaded")
+	_check(EFFECT_CONTRIBUTION_SCRIPT != null, "EffectContribution script is explicitly preloaded")
+	_check(EFFECT_BATCH_RESULT_SCRIPT != null, "EffectBatchResult script is explicitly preloaded")
 	_check(TEST_SIMULATION_CLOCK_SCRIPT != null, "Simulation clock unit suite is explicitly preloaded")
 	TEST_SIMULATION_CLOCK_SCRIPT.run(Callable(self, "_check"))
+	_check(
+		TEST_FINANCE_PROJECT_EFFECTS_SCRIPT != null,
+		"Finance project effect unit suite is explicitly preloaded"
+	)
+	TEST_FINANCE_PROJECT_EFFECTS_SCRIPT.run(Callable(self, "_check"))
 
 	_check(MAIN_SCENE != null, "Main scene is explicitly preloaded")
 

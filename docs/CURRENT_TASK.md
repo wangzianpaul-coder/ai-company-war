@@ -2,7 +2,7 @@
 schema: acw-current-task-v1
 task_id: TP-011
 packet: docs/task_packets/TP-011.md
-state: DRAFT_NOT_AUTHORIZED
+state: AWAITING_USER_ACCEPTANCE
 predecessor_task: TP-010
 base_commit: f5fec17360ecf445a279978a28a8c8477bf4469c
 expected_handoff_commit_subject: "docs(handoff): prepare TP-011 finance and project core"
