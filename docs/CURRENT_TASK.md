@@ -1,11 +1,11 @@
 ---
 schema: acw-current-task-v1
-task_id: TP-021
-packet: docs/task_packets/TP-021.md
-state: AWAITING_USER_ACCEPTANCE
-predecessor_task: TP-020
-base_commit: b19987fbf35e018a98f4030c8139acf7f00141a4
-expected_handoff_commit_subject: "docs(handoff): prepare TP-021 two-market economy"
+task_id: TP-022
+packet: docs/task_packets/TP-022.md
+state: DRAFT_NOT_AUTHORIZED
+predecessor_task: TP-021
+base_commit: 4a90daad7cf4ab8a60137ddf71f0e9aa7d88e6e7
+expected_handoff_commit_subject: "docs(handoff): prepare TP-022 explainable opponent"
 expected_commits_after_base: 1
 expected_branch: main
 remote: origin
@@ -32,9 +32,14 @@ updated: 2026-08-22
 - TP-020 starting handoff commit: `4459173e179014065512a9e4e55eb26836bdc8eb`
 - TP-020 final implementation commit: `b19987fbf35e018a98f4030c8139acf7f00141a4`
 - TP-020 automated/manual validation: `PASSED` / `PASSED_USER_WAIVED_2026-08-22`
-- G2 Gate: `NOT_YET_APPROVED`
+- G2 Gate after TP-020: `NOT_YET_APPROVED`
 - TP-020 publication state: `ACCEPTED_FOR_PUBLICATION`; `COMPLETE` is derived only after the final handoff push and remote-SHA verification
-- Candidate next task: `TP-021` (`DRAFT_NOT_AUTHORIZED`)
+- TP-021 starting handoff commit: `16c4fed6f129d5b70226822e30756dda9f72e828`
+- TP-021 final implementation commit: `4a90daad7cf4ab8a60137ddf71f0e9aa7d88e6e7`
+- TP-021 automated/manual validation: `PASSED` / `PASSED_USER_CONFIRMED_2026-08-22`
+- TP-021 publication state: `ACCEPTED_FOR_PUBLICATION`; `COMPLETE` is derived only after the final handoff push and remote-SHA verification
+- G2 Gate after TP-021: `NOT_YET_APPROVED`; TP-021 acceptance does not approve H3 or the complete G2 Gate
+- Candidate next task: `TP-022` (`DRAFT_NOT_AUTHORIZED`)
 - Confirmed remote: `origin` → `https://github.com/wangzianpaul-coder/ai-company-war.git`
 - Confirmed upstream: `origin/main`
 
@@ -42,23 +47,23 @@ Actual repository facts always override this snapshot. A new thread must re-chec
 
 ## Authorization
 
-This file does not authorize implementation. `TP-021` becomes active only under an explicit current-thread user instruction that names or unambiguously authorizes TP-021; the stored `Thread Start Prompt` is the normal reusable authorization text.
+This file does not authorize implementation. `TP-022` becomes active only under an explicit current-thread user instruction that names or unambiguously authorizes TP-022; the stored `Thread Start Prompt` is the normal reusable authorization text.
 
-The TP-020 closeout is valid only after its implementation and handoff docs commits are ordinarily pushed and the live remote SHA is verified. TP-021 implementation may begin only when that publication closure succeeded, the worktree is clean and local `HEAD` exactly equals the confirmed `origin/main` SHA.
+The TP-021 closeout is valid only after its implementation and handoff docs commits are ordinarily pushed and the live remote SHA is verified. TP-022 implementation may begin only when that publication closure succeeded, the worktree is clean and local `HEAD` exactly equals the confirmed `origin/main` SHA.
 
-TP-021 may start only if all of the following are true: the current `HEAD` is the single direct child of `base_commit`, its commit subject exactly matches `expected_handoff_commit_subject`, `base_commit..HEAD` contains exactly one commit, the branch is `main`, the worktree is clean, and local `HEAD` equals the confirmed upstream SHA. This pins the generated prompt without trying to write a commit's own future SHA into that commit.
+TP-022 may start only if all of the following are true: the current `HEAD` is the single direct child of `base_commit`, its commit subject exactly matches `expected_handoff_commit_subject`, `base_commit..HEAD` contains exactly one commit, the branch is `main`, the worktree is clean, and local `HEAD` equals the confirmed upstream and live remote SHA. This pins the generated prompt without trying to write a commit's own future SHA into that commit.
 
-TP-021 is the two-market economy slice. Neither this pointer nor its generated packet authorizes TP-021 production code, TP-022 opponent AI/RNG, TP-023 six-quarter Prototype/report/batch simulation or any adjacent function.
+TP-022 is the one-opponent Utility decision slice. Neither this pointer nor its generated packet authorizes TP-022 production code, TP-023 six-quarter Prototype/report/batch simulation, H4/G2 approval or any adjacent function.
 
 ## Pointer update rule
 
-After separately authorized TP-021 passes all required validation and acceptance:
+After separately authorized TP-022 passes all required validation and acceptance:
 
-1. mark TP-021 `ACCEPTED_FOR_PUBLICATION` and record its final implementation commit;
-2. generate exactly one direct successor `TP-022` as `DRAFT_NOT_AUTHORIZED`;
+1. mark TP-022 `ACCEPTED_FOR_PUBLICATION` and record its final implementation commit;
+2. generate exactly one direct successor `TP-023` as `DRAFT_NOT_AUTHORIZED`;
 3. update this file to point to the successor;
 4. create exactly one handoff docs commit as the direct child of the implementation commit, using the subject predeclared in the successor packet;
 5. push all TP commits to the confirmed GitHub upstream and verify remote SHA equals local HEAD;
-6. only after that runtime verification report TP-021 as complete and keep the TP-022 draft inert unless a current user instruction explicitly authorizes continuation.
+6. only after that runtime verification report TP-022 as complete and keep the TP-023 draft inert unless a current user instruction explicitly authorizes continuation.
 
-If TP-020 publication push fails, TP-020 remains `ACCEPTED_FOR_PUBLICATION`; the TP-021 file and pointer remain inert and must not be executed until a later safe push succeeds and `HEAD == upstream` is verified.
+If TP-021 publication push fails, TP-021 remains `ACCEPTED_FOR_PUBLICATION`; the TP-022 file and pointer remain inert and must not be executed until a later safe push succeeds and `HEAD == upstream == live remote` is verified.
