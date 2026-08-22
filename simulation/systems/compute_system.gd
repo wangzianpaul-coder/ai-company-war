@@ -33,12 +33,8 @@ func advance_month(compute_state: ComputeStateType) -> EffectBatchResultType:
 		return _failed(EffectBatchResultType.ErrorCode.INVALID_STATE)
 
 	var training_work: int = compute_state.get_training_allocation_units_per_month()
-	var inference_capacity: int = compute_state.get_inference_allocation_units_per_month()
-	var inference_workload: int = compute_state.get_inference_workload_units_per_month()
-	var served_inference: int = (
-		inference_capacity if inference_capacity < inference_workload else inference_workload
-	)
-	var unmet_inference: int = inference_workload - served_inference
+	var served_inference: int = compute_state.get_served_inference_units_per_month()
+	var unmet_inference: int = compute_state.get_unmet_inference_units_per_month()
 
 	var cumulative_training: int = (
 		compute_state.get_cumulative_training_compute_unit_months()

@@ -86,6 +86,26 @@ func get_inference_allocation_units_per_month() -> int:
 	return allocatable_capacity - _training_allocation_units_per_month
 
 
+## Canonically derives the non-bankable inference workload served this month.
+## Malformed raw workloads return zero; systems still reject the malformed state.
+func get_served_inference_units_per_month() -> int:
+	if _inference_workload_units_per_month < 0:
+		return 0
+	var inference_capacity: int = get_inference_allocation_units_per_month()
+	return mini(inference_capacity, _inference_workload_units_per_month)
+
+
+## Canonically derives the inference workload left unmet this month.
+## Malformed raw workloads return zero; systems still reject the malformed state.
+func get_unmet_inference_units_per_month() -> int:
+	if _inference_workload_units_per_month < 0:
+		return 0
+	return (
+		_inference_workload_units_per_month
+		- get_served_inference_units_per_month()
+	)
+
+
 func get_cumulative_training_compute_unit_months() -> int:
 	return _cumulative_training_compute_unit_months
 

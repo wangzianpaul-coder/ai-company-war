@@ -22,6 +22,8 @@ const SetComputeAllocationCommandType = preload(
 @onready var apply_compute_plan_button: Button = (
 	$ComputePlanControls/ApplyComputePlanButton
 )
+@onready var consumer_market_label: Label = $MarketsGrid/ConsumerMarketLabel
+@onready var developer_api_market_label: Label = $MarketsGrid/DeveloperApiMarketLabel
 @onready var cash_explanation_label: Label = $Explanation/CashReconciliationLabel
 @onready var revenue_contribution_label: Label = $Explanation/RevenueContributionLabel
 @onready var operating_cost_contribution_label: Label = $Explanation/OperatingCostContributionLabel
@@ -90,6 +92,8 @@ func _refresh(view_model: DashboardViewModelType) -> void:
 	project_label.text = view_model.get_project_text()
 	compute_plan_label.text = view_model.get_compute_plan_text()
 	inference_workload_label.text = view_model.get_inference_workload_text()
+	consumer_market_label.text = view_model.get_consumer_market_text()
+	developer_api_market_label.text = view_model.get_developer_api_market_text()
 	training_units_spin_box.max_value = float(
 		view_model.get_maximum_training_allocation_units_per_month()
 	)

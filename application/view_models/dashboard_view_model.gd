@@ -23,6 +23,8 @@ var _maximum_training_allocation_units_per_month: int
 var _training_work_text: String
 var _inference_served_text: String
 var _inference_unmet_text: String
+var _consumer_market_text: String
+var _developer_api_market_text: String
 
 
 ## Stores primitive display values without exposing mutation methods.
@@ -47,7 +49,9 @@ func _init(
 	p_maximum_training_allocation_units_per_month: int,
 	p_training_work_text: String,
 	p_inference_served_text: String,
-	p_inference_unmet_text: String
+	p_inference_unmet_text: String,
+	p_consumer_market_text: String,
+	p_developer_api_market_text: String
 ) -> void:
 	_title_text = p_title_text
 	_date_text = p_date_text
@@ -72,6 +76,8 @@ func _init(
 	_training_work_text = p_training_work_text
 	_inference_served_text = p_inference_served_text
 	_inference_unmet_text = p_inference_unmet_text
+	_consumer_market_text = p_consumer_market_text
+	_developer_api_market_text = p_developer_api_market_text
 
 
 func get_title_text() -> String:
@@ -156,3 +162,11 @@ func get_inference_served_text() -> String:
 
 func get_inference_unmet_text() -> String:
 	return _inference_unmet_text
+
+
+func get_consumer_market_text() -> String:
+	return _consumer_market_text
+
+
+func get_developer_api_market_text() -> String:
+	return _developer_api_market_text

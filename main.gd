@@ -4,6 +4,7 @@ extends Control
 const CompanyStateType = preload("res://simulation/state/company_state.gd")
 const ProjectStateType = preload("res://simulation/state/project_state.gd")
 const ComputeStateType = preload("res://simulation/state/compute_state.gd")
+const MarketStateType = preload("res://simulation/state/market_state.gd")
 const GameStateType = preload("res://simulation/state/game_state.gd")
 const GameSessionType = preload("res://application/game_session.gd")
 const DashboardType = preload("res://ui/screens/dashboard.gd")
@@ -19,6 +20,21 @@ const DEMO_TOTAL_COMPUTE_UNITS_PER_MONTH: int = 100
 const DEMO_RESERVE_COMPUTE_UNITS_PER_MONTH: int = 10
 const DEMO_INFERENCE_WORKLOAD_UNITS_PER_MONTH: int = 50
 const DEMO_TRAINING_ALLOCATION_UNITS_PER_MONTH: int = 40
+const DEMO_CONSUMER_WORKLOAD_UNITS_PER_MONTH: int = 30
+const DEMO_DEVELOPER_API_WORKLOAD_UNITS_PER_MONTH: int = 20
+const DEMO_CONSUMER_SERVICE_ALLOCATION_BPS: int = 6_000
+const DEMO_CONSUMER_PLAYER_SHARE_BPS: int = 3_000
+const DEMO_DEVELOPER_API_PLAYER_SHARE_BPS: int = 2_000
+const DEMO_CONSUMER_ADDRESSABLE_MONTHLY_REVENUE_CENTS: int = 100_000
+const DEMO_DEVELOPER_API_ADDRESSABLE_MONTHLY_REVENUE_CENTS: int = 450_000
+const DEMO_CONSUMER_FULL_SERVICE_GROWTH_BPS: int = 30
+const DEMO_DEVELOPER_API_FULL_SERVICE_GROWTH_BPS: int = 10
+const DEMO_CONSUMER_UNMET_PENALTY_BPS_PER_UNIT: int = 10
+const DEMO_DEVELOPER_API_UNMET_PENALTY_BPS_PER_UNIT: int = 25
+const DEMO_CONSUMER_CURRENT_SERVED_UNITS_PER_MONTH: int = 30
+const DEMO_DEVELOPER_API_CURRENT_SERVED_UNITS_PER_MONTH: int = 20
+const DEMO_CONSUMER_CURRENT_MARKET_REVENUE_CENTS: int = 30_000
+const DEMO_DEVELOPER_API_CURRENT_MARKET_REVENUE_CENTS: int = 90_000
 
 @onready var dashboard: DashboardType = $DashboardMargin/Dashboard as DashboardType
 
@@ -43,10 +59,28 @@ func _ready() -> void:
 		DEMO_INFERENCE_WORKLOAD_UNITS_PER_MONTH,
 		DEMO_TRAINING_ALLOCATION_UNITS_PER_MONTH
 	)
+	var demo_market: MarketStateType = MarketStateType.new(
+		DEMO_CONSUMER_WORKLOAD_UNITS_PER_MONTH,
+		DEMO_DEVELOPER_API_WORKLOAD_UNITS_PER_MONTH,
+		DEMO_CONSUMER_SERVICE_ALLOCATION_BPS,
+		DEMO_CONSUMER_PLAYER_SHARE_BPS,
+		DEMO_DEVELOPER_API_PLAYER_SHARE_BPS,
+		DEMO_CONSUMER_ADDRESSABLE_MONTHLY_REVENUE_CENTS,
+		DEMO_DEVELOPER_API_ADDRESSABLE_MONTHLY_REVENUE_CENTS,
+		DEMO_CONSUMER_FULL_SERVICE_GROWTH_BPS,
+		DEMO_DEVELOPER_API_FULL_SERVICE_GROWTH_BPS,
+		DEMO_CONSUMER_UNMET_PENALTY_BPS_PER_UNIT,
+		DEMO_DEVELOPER_API_UNMET_PENALTY_BPS_PER_UNIT,
+		DEMO_CONSUMER_CURRENT_SERVED_UNITS_PER_MONTH,
+		DEMO_DEVELOPER_API_CURRENT_SERVED_UNITS_PER_MONTH,
+		DEMO_CONSUMER_CURRENT_MARKET_REVENUE_CENTS,
+		DEMO_DEVELOPER_API_CURRENT_MARKET_REVENUE_CENTS
+	)
 	var demo_state: GameStateType = GameStateType.new(
 		demo_company,
 		demo_project,
-		demo_compute
+		demo_compute,
+		demo_market
 	)
 	_game_session = GameSessionType.new(demo_state)
 	dashboard.initialize(_game_session)

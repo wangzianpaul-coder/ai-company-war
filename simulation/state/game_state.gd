@@ -6,18 +6,21 @@ const SimulationClockType = preload("res://simulation/engine/simulation_clock.gd
 const CompanyStateType = preload("res://simulation/state/company_state.gd")
 const ProjectStateType = preload("res://simulation/state/project_state.gd")
 const ComputeStateType = preload("res://simulation/state/compute_state.gd")
+const MarketStateType = preload("res://simulation/state/market_state.gd")
 
 var _clock: SimulationClockType
 var _company: CompanyStateType
 var _project: ProjectStateType
 var _compute: ComputeStateType
+var _market: MarketStateType
 
 
 ## Owns independent typed state. Optional inputs are copied, never shared.
 func _init(
 	p_company: CompanyStateType = null,
 	p_project: ProjectStateType = null,
-	p_compute: ComputeStateType = null
+	p_compute: ComputeStateType = null,
+	p_market: MarketStateType = null
 ) -> void:
 	_clock = SimulationClockType.new()
 	if p_company == null:
@@ -43,11 +46,15 @@ func _init(
 		_compute = ComputeStateType.new()
 	else:
 		_compute = p_compute.copy()
+	if p_market == null:
+		_market = MarketStateType.new()
+	else:
+		_market = p_market.copy()
 
 
 ## Returns a fully independent copy preserving the complete owned state graph.
 func copy() -> GameState:
-	var copied_state: GameState = GameState.new(_company, _project, _compute)
+	var copied_state: GameState = GameState.new(_company, _project, _compute, _market)
 	var clock_copied: bool = copied_state.get_clock().advance_months(
 		_clock.get_elapsed_months()
 	)
@@ -74,3 +81,8 @@ func get_project() -> ProjectStateType:
 ## Returns the typed shared monthly capacity state owned by this runtime state.
 func get_compute() -> ComputeStateType:
 	return _compute
+
+
+## Returns the two fixed markets owned by this runtime state.
+func get_market() -> MarketStateType:
+	return _market

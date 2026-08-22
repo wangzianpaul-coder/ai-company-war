@@ -36,7 +36,7 @@ theme_override_constants/margin_bottom = 24
 
 [node name="Dashboard" type="VBoxContainer" parent="DashboardMargin"]
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 5
 script = ExtResource("2_dashboard")
 
 [node name="Header" type="HBoxContainer" parent="DashboardMargin/Dashboard"]
@@ -124,6 +124,28 @@ size_flags_horizontal = 3
 custom_minimum_size = Vector2(220, 40)
 layout_mode = 2
 text = "APPLY COMPUTE PLAN"
+
+[node name="MarketsHeading" type="Label" parent="DashboardMargin/Dashboard"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "MARKETS"
+
+[node name="MarketsGrid" type="GridContainer" parent="DashboardMargin/Dashboard"]
+layout_mode = 2
+theme_override_constants/h_separation = 24
+columns = 2
+
+[node name="ConsumerMarketLabel" type="Label" parent="DashboardMargin/Dashboard/MarketsGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Consumer: 3,000 bps | workload 30 | 30,000 cents/month"
+autowrap_mode = 2
+
+[node name="DeveloperApiMarketLabel" type="Label" parent="DashboardMargin/Dashboard/MarketsGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Developer/API: 2,000 bps | workload 20 | 90,000 cents/month"
+autowrap_mode = 2
 
 [node name="ProjectHeading" type="Label" parent="DashboardMargin/Dashboard"]
 layout_mode = 2

@@ -2,7 +2,7 @@
 schema: acw-current-task-v1
 task_id: TP-021
 packet: docs/task_packets/TP-021.md
-state: DRAFT_NOT_AUTHORIZED
+state: AWAITING_USER_ACCEPTANCE
 predecessor_task: TP-020
 base_commit: b19987fbf35e018a98f4030c8139acf7f00141a4
 expected_handoff_commit_subject: "docs(handoff): prepare TP-021 two-market economy"

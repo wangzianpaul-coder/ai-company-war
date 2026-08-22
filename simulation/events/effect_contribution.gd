@@ -7,11 +7,13 @@ enum Unit {
 	CENTS,
 	MONTHS,
 	COMPUTE_UNIT_MONTHS,
+	BASIS_POINTS,
 }
 
 const SOURCE_FINANCE: StringName = &"finance"
 const SOURCE_PROJECT: StringName = &"project"
 const SOURCE_COMPUTE: StringName = &"compute"
+const SOURCE_MARKET: StringName = &"market"
 
 const REASON_MONTHLY_REVENUE: StringName = &"monthly_revenue"
 const REASON_MONTHLY_OPERATING_COST: StringName = &"monthly_operating_cost"
@@ -21,8 +23,14 @@ const REASON_PROJECT_COMPLETION_REVENUE: StringName = &"project_completion_reven
 const REASON_TRAINING_WORK: StringName = &"training_work"
 const REASON_INFERENCE_SERVED: StringName = &"inference_served"
 const REASON_INFERENCE_UNMET: StringName = &"inference_unmet"
+const REASON_MARKET_SERVED: StringName = &"market_served"
+const REASON_MARKET_UNMET: StringName = &"market_unmet"
+const REASON_MARKET_SHARE_CHANGE: StringName = &"market_share_change"
+const REASON_MARKET_REVENUE_CHANGE: StringName = &"market_revenue_change"
 
 const SUBJECT_COMPANY: StringName = &"company"
+const SUBJECT_CONSUMER: StringName = &"consumer"
+const SUBJECT_DEVELOPER_API: StringName = &"developer_api"
 
 const METRIC_CASH_CENTS: StringName = &"cash_cents"
 const METRIC_PROJECT_PROGRESS_MONTHS: StringName = &"project_progress_months"
@@ -36,6 +44,14 @@ const METRIC_CUMULATIVE_SERVED_INFERENCE_COMPUTE_UNIT_MONTHS: StringName = (
 const METRIC_CUMULATIVE_UNMET_INFERENCE_COMPUTE_UNIT_MONTHS: StringName = (
 	&"cumulative_unmet_inference_compute_unit_months"
 )
+const METRIC_CUMULATIVE_MARKET_SERVED_COMPUTE_UNIT_MONTHS: StringName = (
+	&"cumulative_market_served_compute_unit_months"
+)
+const METRIC_CUMULATIVE_MARKET_UNMET_COMPUTE_UNIT_MONTHS: StringName = (
+	&"cumulative_market_unmet_compute_unit_months"
+)
+const METRIC_PLAYER_SHARE_BPS: StringName = &"player_share_bps"
+const METRIC_MARKET_MONTHLY_REVENUE_CENTS: StringName = &"market_monthly_revenue_cents"
 
 var _source_key: StringName
 var _reason_key: StringName

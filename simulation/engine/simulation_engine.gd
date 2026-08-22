@@ -6,6 +6,7 @@ const GameStateType = preload("res://simulation/state/game_state.gd")
 const ProjectSystemType = preload("res://simulation/systems/project_system.gd")
 const ComputeSystemType = preload("res://simulation/systems/compute_system.gd")
 const FinanceSystemType = preload("res://simulation/systems/finance_system.gd")
+const MarketSystemType = preload("res://simulation/systems/market_system.gd")
 const EffectContributionType = preload("res://simulation/events/effect_contribution.gd")
 const EffectBatchResultType = preload("res://simulation/events/effect_batch_result.gd")
 const TickResultType = preload("res://simulation/engine/tick_result.gd")
@@ -47,7 +48,7 @@ func set_compute_allocation(
 	return TickResultType.new(working_state, allocation_result.get_contributions())
 
 
-## Runs exactly three Project, Compute, Finance, Clock months on an isolated copy.
+## Runs exactly three Project, Compute, Finance, Market, Clock months on an isolated copy.
 func advance_quarter(input_state: GameStateType) -> TickResultType:
 	if input_state == null:
 		return _failed_result()
@@ -58,6 +59,7 @@ func advance_quarter(input_state: GameStateType) -> TickResultType:
 	var project_system: ProjectSystemType = ProjectSystemType.new()
 	var compute_system: ComputeSystemType = ComputeSystemType.new()
 	var finance_system: FinanceSystemType = FinanceSystemType.new()
+	var market_system: MarketSystemType = MarketSystemType.new()
 	var contributions: Array[EffectContributionType] = []
 	for _month_index in 3:
 		var project_result: EffectBatchResultType = project_system.advance_month(
@@ -81,6 +83,15 @@ func advance_quarter(input_state: GameStateType) -> TickResultType:
 		if not finance_result.is_successful():
 			return _failed_result()
 		_append_contributions(contributions, finance_result.get_contributions())
+
+		var market_result: EffectBatchResultType = market_system.settle_month(
+			working_state.get_company(),
+			working_state.get_compute(),
+			working_state.get_market()
+		)
+		if not market_result.is_successful():
+			return _failed_result()
+		_append_contributions(contributions, market_result.get_contributions())
 
 		if not working_state.get_clock().advance_month():
 			return _failed_result()

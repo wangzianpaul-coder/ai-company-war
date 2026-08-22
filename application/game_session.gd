@@ -16,6 +16,7 @@ const GameStateType = preload("res://simulation/state/game_state.gd")
 const CompanyStateType = preload("res://simulation/state/company_state.gd")
 const ProjectStateType = preload("res://simulation/state/project_state.gd")
 const ComputeStateType = preload("res://simulation/state/compute_state.gd")
+const MarketStateType = preload("res://simulation/state/market_state.gd")
 const EffectContributionType = preload("res://simulation/events/effect_contribution.gd")
 const DashboardViewModelType = preload("res://application/view_models/dashboard_view_model.gd")
 const MAX_SIGNED_INT: int = 9_223_372_036_854_775_807
@@ -113,6 +114,15 @@ func _build_view_model(
 	var training_work_compute_unit_months: int = 0
 	var served_inference_compute_unit_months: int = 0
 	var unmet_inference_compute_unit_months: int = 0
+	var consumer_market_served_compute_unit_months: int = 0
+	var consumer_market_unmet_compute_unit_months: int = 0
+	var consumer_market_share_delta_bps: int = 0
+	var consumer_market_revenue_delta_cents: int = 0
+	var developer_api_market_served_compute_unit_months: int = 0
+	var developer_api_market_unmet_compute_unit_months: int = 0
+	var developer_api_market_share_delta_bps: int = 0
+	var developer_api_market_revenue_delta_cents: int = 0
+	var has_market_contributions: bool = false
 	for contribution in contributions:
 		var source_key: StringName = contribution.get_source_key()
 		var reason_key: StringName = contribution.get_reason_key()
@@ -188,6 +198,74 @@ func _build_view_model(
 			if not _can_add(unmet_inference_compute_unit_months, delta):
 				return null
 			unmet_inference_compute_unit_months += delta
+		elif source_key == EffectContributionType.SOURCE_MARKET:
+			has_market_contributions = true
+			if (
+				reason_key == EffectContributionType.REASON_MARKET_SERVED
+				and metric_key
+					== EffectContributionType.METRIC_CUMULATIVE_MARKET_SERVED_COMPUTE_UNIT_MONTHS
+				and unit == EffectContributionType.Unit.COMPUTE_UNIT_MONTHS
+				and delta >= 0
+			):
+				if subject_key == EffectContributionType.SUBJECT_CONSUMER:
+					if not _can_add(consumer_market_served_compute_unit_months, delta):
+						return null
+					consumer_market_served_compute_unit_months += delta
+				elif subject_key == EffectContributionType.SUBJECT_DEVELOPER_API:
+					if not _can_add(developer_api_market_served_compute_unit_months, delta):
+						return null
+					developer_api_market_served_compute_unit_months += delta
+				else:
+					return null
+			elif (
+				reason_key == EffectContributionType.REASON_MARKET_UNMET
+				and metric_key
+					== EffectContributionType.METRIC_CUMULATIVE_MARKET_UNMET_COMPUTE_UNIT_MONTHS
+				and unit == EffectContributionType.Unit.COMPUTE_UNIT_MONTHS
+				and delta >= 0
+			):
+				if subject_key == EffectContributionType.SUBJECT_CONSUMER:
+					if not _can_add(consumer_market_unmet_compute_unit_months, delta):
+						return null
+					consumer_market_unmet_compute_unit_months += delta
+				elif subject_key == EffectContributionType.SUBJECT_DEVELOPER_API:
+					if not _can_add(developer_api_market_unmet_compute_unit_months, delta):
+						return null
+					developer_api_market_unmet_compute_unit_months += delta
+				else:
+					return null
+			elif (
+				reason_key == EffectContributionType.REASON_MARKET_SHARE_CHANGE
+				and metric_key == EffectContributionType.METRIC_PLAYER_SHARE_BPS
+				and unit == EffectContributionType.Unit.BASIS_POINTS
+			):
+				if subject_key == EffectContributionType.SUBJECT_CONSUMER:
+					if not _can_add(consumer_market_share_delta_bps, delta):
+						return null
+					consumer_market_share_delta_bps += delta
+				elif subject_key == EffectContributionType.SUBJECT_DEVELOPER_API:
+					if not _can_add(developer_api_market_share_delta_bps, delta):
+						return null
+					developer_api_market_share_delta_bps += delta
+				else:
+					return null
+			elif (
+				reason_key == EffectContributionType.REASON_MARKET_REVENUE_CHANGE
+				and metric_key == EffectContributionType.METRIC_MARKET_MONTHLY_REVENUE_CENTS
+				and unit == EffectContributionType.Unit.CENTS
+			):
+				if subject_key == EffectContributionType.SUBJECT_CONSUMER:
+					if not _can_add(consumer_market_revenue_delta_cents, delta):
+						return null
+					consumer_market_revenue_delta_cents += delta
+				elif subject_key == EffectContributionType.SUBJECT_DEVELOPER_API:
+					if not _can_add(developer_api_market_revenue_delta_cents, delta):
+						return null
+					developer_api_market_revenue_delta_cents += delta
+				else:
+					return null
+			else:
+				return null
 
 	if not _can_add(
 		served_inference_compute_unit_months,
@@ -201,7 +279,10 @@ func _build_view_model(
 	var company: CompanyStateType = state.get_company()
 	var project: ProjectStateType = state.get_project()
 	var compute: ComputeStateType = state.get_compute()
+	var market: MarketStateType = state.get_market()
 	var clock: SimulationClockType = state.get_clock()
+	if market == null:
+		return null
 	var cash_after_cents: int = company.get_cash_cents()
 	if not _can_subtract(cash_after_cents, cash_delta_cents):
 		return null
@@ -216,6 +297,59 @@ func _build_view_model(
 			lifecycle_text = "ACTIVE"
 		ProjectStateType.Lifecycle.COMPLETED:
 			lifecycle_text = "COMPLETED"
+
+	var consumer_market_text: String = (
+		"Consumer: %s bps | workload %s | %s cents/month" % [
+			_format_integer(market.get_consumer_player_share_bps()),
+			_format_integer(market.get_consumer_workload_units_per_month()),
+			_format_integer(market.get_consumer_current_market_revenue_cents()),
+		]
+	)
+	var developer_api_market_text: String = (
+		"Developer/API: %s bps | workload %s | %s cents/month" % [
+			_format_integer(market.get_developer_api_player_share_bps()),
+			_format_integer(market.get_developer_api_workload_units_per_month()),
+			_format_integer(market.get_developer_api_current_market_revenue_cents()),
+		]
+	)
+	if has_market_contributions:
+		if (
+			not _can_add(
+				consumer_market_served_compute_unit_months,
+				consumer_market_unmet_compute_unit_months
+			)
+			or not _can_add(
+				developer_api_market_served_compute_unit_months,
+				developer_api_market_unmet_compute_unit_months
+			)
+		):
+			return null
+		var consumer_market_demand_compute_unit_months: int = (
+			consumer_market_served_compute_unit_months
+			+ consumer_market_unmet_compute_unit_months
+		)
+		var developer_api_market_demand_compute_unit_months: int = (
+			developer_api_market_served_compute_unit_months
+			+ developer_api_market_unmet_compute_unit_months
+		)
+		consumer_market_text = "Consumer: served %s/%s, share %s → %s bps, revenue %s → %s" % [
+			_format_integer(consumer_market_served_compute_unit_months),
+			_format_integer(consumer_market_demand_compute_unit_months),
+			_format_signed_integer(consumer_market_share_delta_bps),
+			_format_integer(market.get_consumer_player_share_bps()),
+			_format_signed_integer(consumer_market_revenue_delta_cents),
+			_format_integer(market.get_consumer_current_market_revenue_cents()),
+		]
+		developer_api_market_text = (
+			"Developer/API: served %s/%s, share %s → %s bps, revenue %s → %s" % [
+				_format_integer(developer_api_market_served_compute_unit_months),
+				_format_integer(developer_api_market_demand_compute_unit_months),
+				_format_signed_integer(developer_api_market_share_delta_bps),
+				_format_integer(market.get_developer_api_player_share_bps()),
+				_format_signed_integer(developer_api_market_revenue_delta_cents),
+				_format_integer(market.get_developer_api_current_market_revenue_cents()),
+			]
+		)
 
 	return DashboardViewModelType.new(
 		"AI COMPANY WAR",
@@ -271,7 +405,9 @@ func _build_view_model(
 		],
 		"Inference unmet: %s compute-unit-months" % _format_integer(
 			unmet_inference_compute_unit_months
-		)
+		),
+		consumer_market_text,
+		developer_api_market_text
 	)
 
 

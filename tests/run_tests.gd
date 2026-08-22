@@ -16,9 +16,11 @@ const GAME_STATE_SCRIPT = preload("res://simulation/state/game_state.gd")
 const COMPANY_STATE_SCRIPT = preload("res://simulation/state/company_state.gd")
 const PROJECT_STATE_SCRIPT = preload("res://simulation/state/project_state.gd")
 const COMPUTE_STATE_SCRIPT = preload("res://simulation/state/compute_state.gd")
+const MARKET_STATE_SCRIPT = preload("res://simulation/state/market_state.gd")
 const FINANCE_SYSTEM_SCRIPT = preload("res://simulation/systems/finance_system.gd")
 const PROJECT_SYSTEM_SCRIPT = preload("res://simulation/systems/project_system.gd")
 const COMPUTE_SYSTEM_SCRIPT = preload("res://simulation/systems/compute_system.gd")
+const MARKET_SYSTEM_SCRIPT = preload("res://simulation/systems/market_system.gd")
 const EFFECT_CONTRIBUTION_SCRIPT = preload("res://simulation/events/effect_contribution.gd")
 const EFFECT_BATCH_RESULT_SCRIPT = preload("res://simulation/events/effect_batch_result.gd")
 const GAME_SESSION_SCRIPT = preload("res://application/game_session.gd")
@@ -32,6 +34,10 @@ const TEST_QUARTER_SESSION_DASHBOARD_SCRIPT = preload(
 const TEST_COMPUTE_CAPACITY_SCRIPT = preload("res://tests/unit/test_compute_capacity.gd")
 const TEST_COMPUTE_SESSION_DASHBOARD_SCRIPT = preload(
 	"res://tests/integration/test_compute_session_dashboard.gd"
+)
+const TEST_TWO_MARKET_ECONOMY_SCRIPT = preload("res://tests/unit/test_two_market_economy.gd")
+const TEST_MARKET_SESSION_DASHBOARD_SCRIPT = preload(
+	"res://tests/integration/test_market_session_dashboard.gd"
 )
 
 var _pass_count: int = 0
@@ -63,9 +69,11 @@ func _run_tests() -> void:
 	_check(COMPANY_STATE_SCRIPT != null, "CompanyState script is explicitly preloaded")
 	_check(PROJECT_STATE_SCRIPT != null, "ProjectState script is explicitly preloaded")
 	_check(COMPUTE_STATE_SCRIPT != null, "ComputeState script is explicitly preloaded")
+	_check(MARKET_STATE_SCRIPT != null, "MarketState script is explicitly preloaded")
 	_check(FINANCE_SYSTEM_SCRIPT != null, "FinanceSystem script is explicitly preloaded")
 	_check(PROJECT_SYSTEM_SCRIPT != null, "ProjectSystem script is explicitly preloaded")
 	_check(COMPUTE_SYSTEM_SCRIPT != null, "ComputeSystem script is explicitly preloaded")
+	_check(MARKET_SYSTEM_SCRIPT != null, "MarketSystem script is explicitly preloaded")
 	_check(EFFECT_CONTRIBUTION_SCRIPT != null, "EffectContribution script is explicitly preloaded")
 	_check(EFFECT_BATCH_RESULT_SCRIPT != null, "EffectBatchResult script is explicitly preloaded")
 	_check(GAME_SESSION_SCRIPT != null, "GameSession script is explicitly preloaded")
@@ -93,6 +101,16 @@ func _run_tests() -> void:
 		"Compute session dashboard integration suite is explicitly preloaded"
 	)
 	TEST_COMPUTE_SESSION_DASHBOARD_SCRIPT.run(Callable(self, "_check"))
+	_check(
+		TEST_TWO_MARKET_ECONOMY_SCRIPT != null,
+		"Two-market economy unit suite is explicitly preloaded"
+	)
+	TEST_TWO_MARKET_ECONOMY_SCRIPT.run(Callable(self, "_check"))
+	_check(
+		TEST_MARKET_SESSION_DASHBOARD_SCRIPT != null,
+		"Market session dashboard integration suite is explicitly preloaded"
+	)
+	TEST_MARKET_SESSION_DASHBOARD_SCRIPT.run(Callable(self, "_check"))
 
 	_check(MAIN_SCENE != null, "Main scene is explicitly preloaded")
 
@@ -167,6 +185,15 @@ func _run_tests() -> void:
 	var apply_compute_plan_button: Button = main_instance.get_node_or_null(
 		^"DashboardMargin/Dashboard/ComputePlanControls/ApplyComputePlanButton"
 	) as Button
+	var markets_heading: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/MarketsHeading"
+	) as Label
+	var consumer_market_label: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/MarketsGrid/ConsumerMarketLabel"
+	) as Label
+	var developer_api_market_label: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/MarketsGrid/DeveloperApiMarketLabel"
+	) as Label
 	var project_heading: Label = main_instance.get_node_or_null(
 		^"DashboardMargin/Dashboard/ProjectHeading"
 	) as Label
@@ -253,6 +280,16 @@ func _run_tests() -> void:
 		and inference_unmet_label != null
 		and inference_unmet_label.text == "Inference unmet: 0 compute-unit-months"
 	)
+	var initial_market_exact: bool = (
+		markets_heading != null
+		and markets_heading.text == "MARKETS"
+		and consumer_market_label != null
+		and consumer_market_label.text
+			== "Consumer: 3,000 bps | workload 30 | 30,000 cents/month"
+		and developer_api_market_label != null
+		and developer_api_market_label.text
+			== "Developer/API: 2,000 bps | workload 20 | 90,000 cents/month"
+	)
 
 	if training_units_spin_box != null:
 		training_units_spin_box.value = 70.0
@@ -278,6 +315,14 @@ func _run_tests() -> void:
 		and inference_served_label != null
 		and inference_served_label.text == "Inference served: 0/0 compute-unit-months"
 	)
+	var applied_market_exact: bool = (
+		consumer_market_label != null
+		and consumer_market_label.text
+			== "Consumer: 3,000 bps | workload 30 | 30,000 cents/month"
+		and developer_api_market_label != null
+		and developer_api_market_label.text
+			== "Developer/API: 2,000 bps | workload 20 | 90,000 cents/month"
+	)
 
 	if primary_button != null:
 		primary_button.pressed.emit()
@@ -296,6 +341,14 @@ func _run_tests() -> void:
 		and primary_button != null
 		and primary_button.text == "NEXT QUARTER"
 	)
+	var first_press_market_exact: bool = (
+		consumer_market_label != null
+		and consumer_market_label.text
+			== "Consumer: 3,000 bps | workload 30 | 30,000 cents/month"
+		and developer_api_market_label != null
+		and developer_api_market_label.text
+			== "Developer/API: 2,000 bps | workload 20 | 90,000 cents/month"
+	)
 	_check(first_press_exact, "First press starts only the fixed project")
 
 	if primary_button != null:
@@ -305,9 +358,9 @@ func _run_tests() -> void:
 		date_label != null
 		and date_label.text == "2026 Q2"
 		and cash_label != null
-		and cash_label.text == "Cash: 1,075,000 cents"
+		and cash_label.text == "Cash: 912,640 cents"
 		and revenue_label != null
-		and revenue_label.text == "Monthly revenue: 150,000 cents"
+		and revenue_label.text == "Monthly revenue: 59,640 cents"
 		and operating_cost_label != null
 		and operating_cost_label.text == "Monthly operating cost: 80,000 cents"
 		and project_label != null
@@ -316,10 +369,10 @@ func _run_tests() -> void:
 		and primary_button.text == "NEXT QUARTER"
 		and cash_explanation_label != null
 		and cash_explanation_label.text
-			== "Cash: 1,000,000 → 1,075,000 = +75,000 cents"
+			== "Cash: 1,000,000 → 912,640 = -87,360 cents"
 		and revenue_contribution_label != null
 		and revenue_contribution_label.text
-			== "Revenue cash contributions: +390,000 cents"
+			== "Revenue cash contributions: +227,640 cents"
 		and operating_cost_contribution_label != null
 		and operating_cost_contribution_label.text
 			== "Operating-cost contributions: -240,000 cents"
@@ -335,6 +388,21 @@ func _run_tests() -> void:
 	TEST_QUARTER_SESSION_DASHBOARD_SCRIPT.report_dashboard_scene(
 		Callable(self, "_check"),
 		initial_scene_exact and first_press_exact and final_scene_exact
+	)
+	var final_market_exact: bool = (
+		consumer_market_label != null
+		and consumer_market_label.text
+			== "Consumer: served 36/90, share -540 → 2,460 bps, revenue -20,160 → 9,840"
+		and developer_api_market_label != null
+		and developer_api_market_label.text
+			== "Developer/API: served 24/60, share -900 → 1,100 bps, revenue -70,200 → 19,800"
+	)
+	TEST_MARKET_SESSION_DASHBOARD_SCRIPT.report_dashboard_scene(
+		Callable(self, "_check"),
+		initial_market_exact
+			and applied_market_exact
+			and first_press_market_exact
+			and final_market_exact
 	)
 	var final_compute_exact: bool = (
 		compute_plan_label != null
@@ -368,6 +436,9 @@ func _run_tests() -> void:
 		training_units_spin_box,
 		compute_plan_spacer,
 		apply_compute_plan_button,
+		markets_heading,
+		consumer_market_label,
+		developer_api_market_label,
 		project_heading,
 		project_label,
 		primary_button,
@@ -410,6 +481,10 @@ func _run_tests() -> void:
 		fits_1280 and fits_1920
 	)
 	TEST_COMPUTE_SESSION_DASHBOARD_SCRIPT.report_dashboard_layout(
+		Callable(self, "_check"),
+		fits_1280 and fits_1920
+	)
+	TEST_MARKET_SESSION_DASHBOARD_SCRIPT.report_dashboard_layout(
 		Callable(self, "_check"),
 		fits_1280 and fits_1920
 	)
