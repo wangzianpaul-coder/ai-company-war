@@ -2,7 +2,7 @@
 schema: acw-current-task-v1
 task_id: TP-022
 packet: docs/task_packets/TP-022.md
-state: DRAFT_NOT_AUTHORIZED
+state: AWAITING_USER_ACCEPTANCE
 predecessor_task: TP-021
 base_commit: 4a90daad7cf4ab8a60137ddf71f0e9aa7d88e6e7
 expected_handoff_commit_subject: "docs(handoff): prepare TP-022 explainable opponent"
@@ -11,7 +11,7 @@ expected_branch: main
 remote: origin
 upstream: origin/main
 push_policy: ORDINARY_FAST_FORWARD_AND_REMOTE_SHA_MATCH_REQUIRED
-updated: 2026-08-22
+updated: 2026-08-24
 ---
 
 # Current Task Pointer
@@ -39,7 +39,7 @@ updated: 2026-08-22
 - TP-021 automated/manual validation: `PASSED` / `PASSED_USER_CONFIRMED_2026-08-22`
 - TP-021 publication state: `ACCEPTED_FOR_PUBLICATION`; `COMPLETE` is derived only after the final handoff push and remote-SHA verification
 - G2 Gate after TP-021: `NOT_YET_APPROVED`; TP-021 acceptance does not approve H3 or the complete G2 Gate
-- Candidate next task: `TP-022` (`DRAFT_NOT_AUTHORIZED`)
+- TP-022 implementation state: `AWAITING_USER_ACCEPTANCE`; TP-023 has not been generated or authorized
 - Confirmed remote: `origin` → `https://github.com/wangzianpaul-coder/ai-company-war.git`
 - Confirmed upstream: `origin/main`
 

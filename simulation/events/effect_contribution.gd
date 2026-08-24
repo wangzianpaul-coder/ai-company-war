@@ -26,11 +26,13 @@ const REASON_INFERENCE_UNMET: StringName = &"inference_unmet"
 const REASON_MARKET_SERVED: StringName = &"market_served"
 const REASON_MARKET_UNMET: StringName = &"market_unmet"
 const REASON_MARKET_SHARE_CHANGE: StringName = &"market_share_change"
+const REASON_OPPONENT_MARKET_PRESSURE: StringName = &"opponent_market_pressure"
 const REASON_MARKET_REVENUE_CHANGE: StringName = &"market_revenue_change"
 
 const SUBJECT_COMPANY: StringName = &"company"
 const SUBJECT_CONSUMER: StringName = &"consumer"
 const SUBJECT_DEVELOPER_API: StringName = &"developer_api"
+const SUBJECT_NORTHSTAR_LABS: StringName = &"northstar_labs"
 
 const METRIC_CASH_CENTS: StringName = &"cash_cents"
 const METRIC_PROJECT_PROGRESS_MONTHS: StringName = &"project_progress_months"

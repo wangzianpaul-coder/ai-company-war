@@ -17,6 +17,13 @@ const CompanyStateType = preload("res://simulation/state/company_state.gd")
 const ProjectStateType = preload("res://simulation/state/project_state.gd")
 const ComputeStateType = preload("res://simulation/state/compute_state.gd")
 const MarketStateType = preload("res://simulation/state/market_state.gd")
+const OpponentStateType = preload("res://simulation/state/opponent_state.gd")
+const OpponentPlanningSnapshotType = preload(
+	"res://simulation/ai/opponent_planning_snapshot.gd"
+)
+const OpponentPersonalityType = preload("res://simulation/ai/opponent_personality.gd")
+const OpponentDecisionType = preload("res://simulation/ai/opponent_decision.gd")
+const AiSystemType = preload("res://simulation/systems/ai_system.gd")
 const EffectContributionType = preload("res://simulation/events/effect_contribution.gd")
 const DashboardViewModelType = preload("res://application/view_models/dashboard_view_model.gd")
 const MAX_SIGNED_INT: int = 9_223_372_036_854_775_807
@@ -27,29 +34,65 @@ signal committed_result(view_model: DashboardViewModelType)
 var _engine: SimulationEngineType = SimulationEngineType.new()
 var _active_state: GameStateType
 var _last_committed_contributions: Array[EffectContributionType] = []
+var _last_rival_contributions: Array[EffectContributionType] = []
 var _current_view_model: DashboardViewModelType
+var _personality: OpponentPersonalityType
+var _cached_planning_snapshot: OpponentPlanningSnapshotType
+var _cached_preview: OpponentDecisionType
 
 
-## Takes ownership of an independent copy of the supplied initial state.
-func _init(p_initial_state: GameStateType) -> void:
+## Takes ownership of independent state and an immutable injected personality.
+func _init(
+	p_initial_state: GameStateType,
+	p_personality: OpponentPersonalityType = null
+) -> void:
 	if p_initial_state == null:
 		_active_state = GameStateType.new()
 	else:
 		_active_state = p_initial_state.copy()
+	_personality = p_personality
+	_cached_planning_snapshot = _create_planning_snapshot(_active_state)
+	_cached_preview = _create_preview(
+		_active_state,
+		_cached_planning_snapshot,
+		_personality
+	)
 	var no_contributions: Array[EffectContributionType] = []
-	_current_view_model = _build_view_model(_active_state, no_contributions)
+	_current_view_model = _build_view_model(
+		_active_state,
+		no_contributions,
+		_cached_preview,
+		_last_rival_contributions
+	)
 
 
 ## Accepts only the three concrete commands and publishes only complete success.
 func submit_command(command: GameCommandType) -> CommandResultType:
 	if command == null:
 		return CommandResultType.new(false)
+	if not _engine.is_opponent_boundary_valid(
+		_active_state,
+		_cached_planning_snapshot,
+		_personality
+	):
+		return CommandResultType.new(false)
+	if (
+		_active_state.get_opponent().get_opponent_id() != &""
+		and _cached_preview == null
+	):
+		return CommandResultType.new(false)
 
 	var tick_result: TickResultType
+	var advances_quarter: bool = false
 	if command.get_script() == StartProjectCommandType:
 		tick_result = _engine.start_project(_active_state)
 	elif command.get_script() == AdvanceQuarterCommandType:
-		tick_result = _engine.advance_quarter(_active_state)
+		advances_quarter = true
+		tick_result = _engine.advance_quarter(
+			_active_state,
+			_cached_planning_snapshot,
+			_personality
+		)
 	elif command.get_script() == SetComputeAllocationCommandType:
 		var allocation_command: SetComputeAllocationCommandType = (
 			command as SetComputeAllocationCommandType
@@ -67,9 +110,33 @@ func submit_command(command: GameCommandType) -> CommandResultType:
 	if candidate_state == null:
 		return CommandResultType.new(false)
 	var candidate_contributions: Array[EffectContributionType] = tick_result.get_contributions()
+	var candidate_planning_snapshot: OpponentPlanningSnapshotType = (
+		_cached_planning_snapshot
+	)
+	var candidate_preview: OpponentDecisionType = _cached_preview
+	var candidate_rival_contributions: Array[EffectContributionType] = (
+		_copy_contributions(_last_rival_contributions)
+	)
+	if advances_quarter:
+		candidate_planning_snapshot = _create_planning_snapshot(candidate_state)
+		candidate_preview = _create_preview(
+			candidate_state,
+			candidate_planning_snapshot,
+			_personality
+		)
+		if (
+			candidate_state.get_opponent().get_opponent_id() != &""
+			and candidate_preview == null
+		):
+			return CommandResultType.new(false)
+		candidate_rival_contributions = _extract_rival_contributions(
+			candidate_contributions
+		)
 	var candidate_view_model: DashboardViewModelType = _build_view_model(
 		candidate_state,
-		candidate_contributions
+		candidate_contributions,
+		candidate_preview,
+		candidate_rival_contributions
 	)
 	if candidate_view_model == null:
 		return CommandResultType.new(false)
@@ -78,6 +145,10 @@ func submit_command(command: GameCommandType) -> CommandResultType:
 	_last_committed_contributions.clear()
 	for contribution in candidate_contributions:
 		_last_committed_contributions.append(contribution)
+	if advances_quarter:
+		_cached_planning_snapshot = candidate_planning_snapshot
+		_cached_preview = candidate_preview
+		_last_rival_contributions = candidate_rival_contributions
 	_current_view_model = candidate_view_model
 	committed_result.emit(_current_view_model)
 	return CommandResultType.new(true)
@@ -90,10 +161,17 @@ func get_state_snapshot() -> GameStateType:
 
 ## Returns a typed array copy preserving the committed source order.
 func get_last_committed_contributions() -> Array[EffectContributionType]:
-	var copied_contributions: Array[EffectContributionType] = []
-	for contribution in _last_committed_contributions:
-		copied_contributions.append(contribution)
-	return copied_contributions
+	return _copy_contributions(_last_committed_contributions)
+
+
+## Returns the cached public quarter boundary without exposing session ownership.
+func get_cached_opponent_planning_snapshot() -> OpponentPlanningSnapshotType:
+	return _cached_planning_snapshot.copy()
+
+
+## Returns an ordered array copy of only the last committed rival economy slice.
+func get_last_rival_contributions() -> Array[EffectContributionType]:
+	return _copy_contributions(_last_rival_contributions)
 
 
 ## Returns the current immutable-by-interface display values.
@@ -103,7 +181,9 @@ func get_current_view_model() -> DashboardViewModelType:
 
 func _build_view_model(
 	state: GameStateType,
-	contributions: Array[EffectContributionType]
+	contributions: Array[EffectContributionType],
+	preview: OpponentDecisionType,
+	rival_contributions: Array[EffectContributionType]
 ) -> DashboardViewModelType:
 	var revenue_cash_cents: int = 0
 	var operating_cost_cash_cents: int = 0
@@ -235,7 +315,11 @@ func _build_view_model(
 				else:
 					return null
 			elif (
-				reason_key == EffectContributionType.REASON_MARKET_SHARE_CHANGE
+				(
+					reason_key == EffectContributionType.REASON_MARKET_SHARE_CHANGE
+					or reason_key
+						== EffectContributionType.REASON_OPPONENT_MARKET_PRESSURE
+				)
 				and metric_key == EffectContributionType.METRIC_PLAYER_SHARE_BPS
 				and unit == EffectContributionType.Unit.BASIS_POINTS
 			):
@@ -351,6 +435,157 @@ func _build_view_model(
 			]
 		)
 
+	var rival_signal_text: String = ""
+	var rival_reason_text: String = ""
+	var rival_utility_text: String = ""
+	var rival_last_action_text: String = ""
+	var rival_quarter_text: String = ""
+	var rival_market_pressure_text: String = ""
+	var opponent: OpponentStateType = state.get_opponent()
+	if (
+		opponent != null
+		and opponent.get_opponent_id() != &""
+		and _personality != null
+		and preview != null
+		and preview.is_successful()
+	):
+		var preview_command: SetComputeAllocationCommandType = preview.get_command()
+		if (
+			preview_command == null
+			or preview_command.get_script() != SetComputeAllocationCommandType
+		):
+			return null
+		var opponent_compute: ComputeStateType = opponent.get_compute()
+		var allocatable_units: int = (
+			opponent_compute.get_allocatable_capacity_units_per_month()
+		)
+		var preview_training_units: int = (
+			preview_command.get_training_units_per_month()
+		)
+		if preview_training_units < 0 or preview_training_units > allocatable_units:
+			return null
+		var preview_inference_units: int = allocatable_units - preview_training_units
+		var reason_display: String = _reason_display_text(preview.get_reason_key())
+		if reason_display.is_empty():
+			return null
+		var has_committed_rival_quarter: bool = not rival_contributions.is_empty()
+		if has_committed_rival_quarter:
+			rival_signal_text = (
+				"Next signal: %s training / %s inference — %s" % [
+					_format_integer(preview_training_units),
+					_format_integer(preview_inference_units),
+					reason_display,
+				]
+			)
+		else:
+			rival_signal_text = "%s signal: %s training / %s inference" % [
+				_personality.get_display_name(),
+				_format_integer(preview_training_units),
+				_format_integer(preview_inference_units),
+			]
+		rival_reason_text = "Why: %s" % reason_display
+		rival_utility_text = "Utility: %s = %s + %s seeded noise" % [
+			_format_integer(preview.get_total_utility_points()),
+			_format_integer(preview.get_base_utility_points()),
+			_format_integer(preview.get_noise_points()),
+		]
+		rival_last_action_text = "Last action: —"
+		rival_quarter_text = "Quarter: —"
+		rival_market_pressure_text = "Market pressure: —"
+		if has_committed_rival_quarter:
+			var last_training_units: int = (
+				opponent.get_last_training_units_per_month()
+			)
+			if last_training_units < 0 or last_training_units > allocatable_units:
+				return null
+			var rival_training_work: int = 0
+			var rival_served_inference: int = 0
+			var rival_unmet_inference: int = 0
+			var consumer_pressure_bps: int = 0
+			var developer_api_pressure_bps: int = 0
+			for rival_contribution in rival_contributions:
+				var rival_source: StringName = rival_contribution.get_source_key()
+				var rival_reason: StringName = rival_contribution.get_reason_key()
+				var rival_subject: StringName = rival_contribution.get_subject_key()
+				var rival_metric: StringName = rival_contribution.get_metric_key()
+				var rival_unit: int = rival_contribution.get_unit()
+				var rival_delta: int = rival_contribution.get_delta()
+				if (
+					rival_source == EffectContributionType.SOURCE_COMPUTE
+					and rival_subject == EffectContributionType.SUBJECT_NORTHSTAR_LABS
+					and rival_reason == EffectContributionType.REASON_TRAINING_WORK
+					and rival_metric
+						== EffectContributionType.METRIC_CUMULATIVE_TRAINING_COMPUTE_UNIT_MONTHS
+					and rival_unit == EffectContributionType.Unit.COMPUTE_UNIT_MONTHS
+				):
+					if not _can_add(rival_training_work, rival_delta):
+						return null
+					rival_training_work += rival_delta
+				elif (
+					rival_source == EffectContributionType.SOURCE_COMPUTE
+					and rival_subject == EffectContributionType.SUBJECT_NORTHSTAR_LABS
+					and rival_reason == EffectContributionType.REASON_INFERENCE_SERVED
+					and rival_metric
+						== EffectContributionType.METRIC_CUMULATIVE_SERVED_INFERENCE_COMPUTE_UNIT_MONTHS
+					and rival_unit == EffectContributionType.Unit.COMPUTE_UNIT_MONTHS
+				):
+					if not _can_add(rival_served_inference, rival_delta):
+						return null
+					rival_served_inference += rival_delta
+				elif (
+					rival_source == EffectContributionType.SOURCE_COMPUTE
+					and rival_subject == EffectContributionType.SUBJECT_NORTHSTAR_LABS
+					and rival_reason == EffectContributionType.REASON_INFERENCE_UNMET
+					and rival_metric
+						== EffectContributionType.METRIC_CUMULATIVE_UNMET_INFERENCE_COMPUTE_UNIT_MONTHS
+					and rival_unit == EffectContributionType.Unit.COMPUTE_UNIT_MONTHS
+				):
+					if not _can_add(rival_unmet_inference, rival_delta):
+						return null
+					rival_unmet_inference += rival_delta
+				elif (
+					rival_source == EffectContributionType.SOURCE_MARKET
+					and rival_reason
+						== EffectContributionType.REASON_OPPONENT_MARKET_PRESSURE
+					and rival_metric == EffectContributionType.METRIC_PLAYER_SHARE_BPS
+					and rival_unit == EffectContributionType.Unit.BASIS_POINTS
+				):
+					if rival_subject == EffectContributionType.SUBJECT_CONSUMER:
+						if not _can_add(consumer_pressure_bps, rival_delta):
+							return null
+						consumer_pressure_bps += rival_delta
+					elif rival_subject == EffectContributionType.SUBJECT_DEVELOPER_API:
+						if not _can_add(developer_api_pressure_bps, rival_delta):
+							return null
+						developer_api_pressure_bps += rival_delta
+					else:
+						return null
+				else:
+					return null
+			if not _can_add(rival_served_inference, rival_unmet_inference):
+				return null
+			var rival_inference_workload: int = (
+				rival_served_inference + rival_unmet_inference
+			)
+			rival_last_action_text = "Last action: %s training / %s inference" % [
+				_format_integer(last_training_units),
+				_format_integer(allocatable_units - last_training_units),
+			]
+			rival_quarter_text = (
+				"Quarter: %s training; inference %s/%s; unmet %s" % [
+					_format_signed_integer(rival_training_work),
+					_format_integer(rival_served_inference),
+					_format_integer(rival_inference_workload),
+					_format_integer(rival_unmet_inference),
+				]
+			)
+			rival_market_pressure_text = (
+				"Market pressure: Consumer %s bps; Developer/API %s bps" % [
+					_format_signed_integer(consumer_pressure_bps),
+					_format_signed_integer(developer_api_pressure_bps),
+				]
+			)
+
 	return DashboardViewModelType.new(
 		"AI COMPANY WAR",
 		"%d Q%d" % [clock.get_year(), clock.get_quarter()],
@@ -407,8 +642,81 @@ func _build_view_model(
 			unmet_inference_compute_unit_months
 		),
 		consumer_market_text,
-		developer_api_market_text
+		developer_api_market_text,
+		rival_signal_text,
+		rival_reason_text,
+		rival_utility_text,
+		rival_last_action_text,
+		rival_quarter_text,
+		rival_market_pressure_text
 	)
+
+
+func _create_planning_snapshot(state: GameStateType) -> OpponentPlanningSnapshotType:
+	return OpponentPlanningSnapshotType.new(
+		state.get_clock().get_elapsed_months(),
+		state.get_market().get_consumer_player_share_bps(),
+		state.get_market().get_developer_api_player_share_bps()
+	)
+
+
+func _create_preview(
+	state: GameStateType,
+	snapshot: OpponentPlanningSnapshotType,
+	personality: OpponentPersonalityType
+) -> OpponentDecisionType:
+	if (
+		state.get_opponent().get_opponent_id() == &""
+		or personality == null
+		or snapshot == null
+	):
+		return null
+	var preview: OpponentDecisionType = AiSystemType.new().decide(
+		snapshot,
+		state.get_opponent(),
+		personality,
+		state.get_named_rng()
+	)
+	return preview if preview != null and preview.is_successful() else null
+
+
+func _extract_rival_contributions(
+	contributions: Array[EffectContributionType]
+) -> Array[EffectContributionType]:
+	var rival_contributions: Array[EffectContributionType] = []
+	for contribution in contributions:
+		if (
+			(
+				contribution.get_source_key() == EffectContributionType.SOURCE_COMPUTE
+				and contribution.get_subject_key()
+					== EffectContributionType.SUBJECT_NORTHSTAR_LABS
+			)
+			or (
+				contribution.get_source_key() == EffectContributionType.SOURCE_MARKET
+				and contribution.get_reason_key()
+					== EffectContributionType.REASON_OPPONENT_MARKET_PRESSURE
+			)
+		):
+			rival_contributions.append(contribution)
+	return rival_contributions
+
+
+func _copy_contributions(
+	contributions: Array[EffectContributionType]
+) -> Array[EffectContributionType]:
+	var copied_contributions: Array[EffectContributionType] = []
+	for contribution in contributions:
+		copied_contributions.append(contribution)
+	return copied_contributions
+
+
+func _reason_display_text(reason_key: StringName) -> String:
+	match reason_key:
+		OpponentPersonalityType.REASON_DEFEND_MARKET_POSITION:
+			return "Defend market position"
+		OpponentPersonalityType.REASON_CLOSE_TRAINING_GAP:
+			return "Close training gap"
+	return ""
 
 
 func _format_signed_integer(value: int) -> String:

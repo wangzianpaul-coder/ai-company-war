@@ -17,10 +17,19 @@ const COMPANY_STATE_SCRIPT = preload("res://simulation/state/company_state.gd")
 const PROJECT_STATE_SCRIPT = preload("res://simulation/state/project_state.gd")
 const COMPUTE_STATE_SCRIPT = preload("res://simulation/state/compute_state.gd")
 const MARKET_STATE_SCRIPT = preload("res://simulation/state/market_state.gd")
+const OPPONENT_STATE_SCRIPT = preload("res://simulation/state/opponent_state.gd")
+const OPPONENT_PERSONALITY_SCRIPT = preload("res://simulation/ai/opponent_personality.gd")
+const OPPONENT_PLANNING_SNAPSHOT_SCRIPT = preload(
+	"res://simulation/ai/opponent_planning_snapshot.gd"
+)
+const OPPONENT_DECISION_SCRIPT = preload("res://simulation/ai/opponent_decision.gd")
+const NAMED_RNG_STATE_SCRIPT = preload("res://simulation/rng/named_rng_state.gd")
+const VERSIONED_RNG_SCRIPT = preload("res://simulation/rng/versioned_rng.gd")
 const FINANCE_SYSTEM_SCRIPT = preload("res://simulation/systems/finance_system.gd")
 const PROJECT_SYSTEM_SCRIPT = preload("res://simulation/systems/project_system.gd")
 const COMPUTE_SYSTEM_SCRIPT = preload("res://simulation/systems/compute_system.gd")
 const MARKET_SYSTEM_SCRIPT = preload("res://simulation/systems/market_system.gd")
+const AI_SYSTEM_SCRIPT = preload("res://simulation/systems/ai_system.gd")
 const EFFECT_CONTRIBUTION_SCRIPT = preload("res://simulation/events/effect_contribution.gd")
 const EFFECT_BATCH_RESULT_SCRIPT = preload("res://simulation/events/effect_batch_result.gd")
 const GAME_SESSION_SCRIPT = preload("res://application/game_session.gd")
@@ -38,6 +47,12 @@ const TEST_COMPUTE_SESSION_DASHBOARD_SCRIPT = preload(
 const TEST_TWO_MARKET_ECONOMY_SCRIPT = preload("res://tests/unit/test_two_market_economy.gd")
 const TEST_MARKET_SESSION_DASHBOARD_SCRIPT = preload(
 	"res://tests/integration/test_market_session_dashboard.gd"
+)
+const TEST_EXPLAINABLE_OPPONENT_SCRIPT = preload(
+	"res://tests/unit/test_explainable_opponent.gd"
+)
+const TEST_OPPONENT_SESSION_DASHBOARD_SCRIPT = preload(
+	"res://tests/integration/test_opponent_session_dashboard.gd"
 )
 
 var _pass_count: int = 0
@@ -70,10 +85,23 @@ func _run_tests() -> void:
 	_check(PROJECT_STATE_SCRIPT != null, "ProjectState script is explicitly preloaded")
 	_check(COMPUTE_STATE_SCRIPT != null, "ComputeState script is explicitly preloaded")
 	_check(MARKET_STATE_SCRIPT != null, "MarketState script is explicitly preloaded")
+	_check(OPPONENT_STATE_SCRIPT != null, "OpponentState script is explicitly preloaded")
+	_check(
+		OPPONENT_PERSONALITY_SCRIPT != null,
+		"OpponentPersonality script is explicitly preloaded"
+	)
+	_check(
+		OPPONENT_PLANNING_SNAPSHOT_SCRIPT != null,
+		"OpponentPlanningSnapshot script is explicitly preloaded"
+	)
+	_check(OPPONENT_DECISION_SCRIPT != null, "OpponentDecision script is explicitly preloaded")
+	_check(NAMED_RNG_STATE_SCRIPT != null, "NamedRngState script is explicitly preloaded")
+	_check(VERSIONED_RNG_SCRIPT != null, "VersionedRng script is explicitly preloaded")
 	_check(FINANCE_SYSTEM_SCRIPT != null, "FinanceSystem script is explicitly preloaded")
 	_check(PROJECT_SYSTEM_SCRIPT != null, "ProjectSystem script is explicitly preloaded")
 	_check(COMPUTE_SYSTEM_SCRIPT != null, "ComputeSystem script is explicitly preloaded")
 	_check(MARKET_SYSTEM_SCRIPT != null, "MarketSystem script is explicitly preloaded")
+	_check(AI_SYSTEM_SCRIPT != null, "AiSystem script is explicitly preloaded")
 	_check(EFFECT_CONTRIBUTION_SCRIPT != null, "EffectContribution script is explicitly preloaded")
 	_check(EFFECT_BATCH_RESULT_SCRIPT != null, "EffectBatchResult script is explicitly preloaded")
 	_check(GAME_SESSION_SCRIPT != null, "GameSession script is explicitly preloaded")
@@ -111,6 +139,16 @@ func _run_tests() -> void:
 		"Market session dashboard integration suite is explicitly preloaded"
 	)
 	TEST_MARKET_SESSION_DASHBOARD_SCRIPT.run(Callable(self, "_check"))
+	_check(
+		TEST_EXPLAINABLE_OPPONENT_SCRIPT != null,
+		"Explainable opponent unit suite is explicitly preloaded"
+	)
+	TEST_EXPLAINABLE_OPPONENT_SCRIPT.run(Callable(self, "_check"))
+	_check(
+		TEST_OPPONENT_SESSION_DASHBOARD_SCRIPT != null,
+		"Opponent session dashboard integration suite is explicitly preloaded"
+	)
+	TEST_OPPONENT_SESSION_DASHBOARD_SCRIPT.run(Callable(self, "_check"))
 
 	_check(MAIN_SCENE != null, "Main scene is explicitly preloaded")
 
@@ -125,6 +163,112 @@ func _run_tests() -> void:
 		main_instance.free()
 		_finish()
 		return
+
+	var signal_stability_exact: bool = false
+	var applied_compute_exact: bool = false
+	var applied_market_exact: bool = false
+	var signal_instance: Node = MAIN_SCENE.instantiate()
+	if signal_instance != null:
+		root.add_child(signal_instance)
+		await process_frame
+		var signal_training_spin_box: SpinBox = signal_instance.get_node_or_null(
+			^"DashboardMargin/Dashboard/ComputePlanControls/TrainingUnitsSpinBox"
+		) as SpinBox
+		var signal_apply_button: Button = signal_instance.get_node_or_null(
+			^"DashboardMargin/Dashboard/ComputePlanControls/ApplyComputePlanButton"
+		) as Button
+		var signal_primary_button: Button = signal_instance.get_node_or_null(
+			^"DashboardMargin/Dashboard/PrimaryButton"
+		) as Button
+		var signal_compute_plan_label: Label = signal_instance.get_node_or_null(
+			^"DashboardMargin/Dashboard/ComputePlanLabel"
+		) as Label
+		var signal_project_label: Label = signal_instance.get_node_or_null(
+			^"DashboardMargin/Dashboard/ProjectLabel"
+		) as Label
+		var signal_consumer_label: Label = signal_instance.get_node_or_null(
+			^"DashboardMargin/Dashboard/MarketsGrid/ConsumerMarketLabel"
+		) as Label
+		var signal_developer_label: Label = signal_instance.get_node_or_null(
+			^"DashboardMargin/Dashboard/MarketsGrid/DeveloperApiMarketLabel"
+		) as Label
+		var signal_label: Label = signal_instance.get_node_or_null(
+			^"DashboardMargin/Dashboard/RivalGrid/RivalSignalLabel"
+		) as Label
+		var signal_reason_label: Label = signal_instance.get_node_or_null(
+			^"DashboardMargin/Dashboard/RivalGrid/RivalReasonLabel"
+		) as Label
+		var signal_utility_label: Label = signal_instance.get_node_or_null(
+			^"DashboardMargin/Dashboard/RivalGrid/RivalUtilityLabel"
+		) as Label
+		var signal_last_action_label: Label = signal_instance.get_node_or_null(
+			^"DashboardMargin/Dashboard/RivalGrid/RivalLastActionLabel"
+		) as Label
+		var signal_quarter_label: Label = signal_instance.get_node_or_null(
+			^"DashboardMargin/Dashboard/RivalGrid/RivalQuarterLabel"
+		) as Label
+		var signal_pressure_label: Label = signal_instance.get_node_or_null(
+			^"DashboardMargin/Dashboard/RivalGrid/RivalMarketPressureLabel"
+		) as Label
+		var initial_signal_exact: bool = (
+			signal_label != null
+			and signal_label.text == "Northstar Labs signal: 70 training / 20 inference"
+			and signal_reason_label != null
+			and signal_reason_label.text == "Why: Close training gap"
+			and signal_utility_label != null
+			and signal_utility_label.text == "Utility: 688 = 680 + 8 seeded noise"
+			and signal_last_action_label != null
+			and signal_last_action_label.text == "Last action: —"
+			and signal_quarter_label != null
+			and signal_quarter_label.text == "Quarter: —"
+			and signal_pressure_label != null
+			and signal_pressure_label.text == "Market pressure: —"
+		)
+		if signal_training_spin_box != null:
+			signal_training_spin_box.value = 70.0
+		if signal_apply_button != null:
+			signal_apply_button.pressed.emit()
+		await process_frame
+		applied_compute_exact = (
+			signal_compute_plan_label != null
+			and signal_compute_plan_label.text
+				== "Compute/month: 100 = 70 training + 20 inference + 10 reserve"
+		)
+		applied_market_exact = (
+			signal_consumer_label != null
+			and signal_consumer_label.text
+				== "Consumer: 3,000 bps | workload 30 | 30,000 cents/month"
+			and signal_developer_label != null
+			and signal_developer_label.text
+				== "Developer/API: 2,000 bps | workload 20 | 90,000 cents/month"
+		)
+		var signal_after_allocation_exact: bool = (
+			initial_signal_exact
+			and signal_label.text == "Northstar Labs signal: 70 training / 20 inference"
+			and signal_reason_label.text == "Why: Close training gap"
+			and signal_utility_label.text == "Utility: 688 = 680 + 8 seeded noise"
+			and signal_last_action_label.text == "Last action: —"
+			and signal_quarter_label.text == "Quarter: —"
+			and signal_pressure_label.text == "Market pressure: —"
+		)
+		if signal_primary_button != null:
+			signal_primary_button.pressed.emit()
+		await process_frame
+		signal_stability_exact = (
+			signal_after_allocation_exact
+			and applied_compute_exact
+			and applied_market_exact
+			and signal_project_label != null
+			and signal_project_label.text == "Project: project_alpha — ACTIVE 0/3"
+			and signal_label.text == "Northstar Labs signal: 70 training / 20 inference"
+			and signal_reason_label.text == "Why: Close training gap"
+			and signal_utility_label.text == "Utility: 688 = 680 + 8 seeded noise"
+			and signal_last_action_label.text == "Last action: —"
+			and signal_quarter_label.text == "Quarter: —"
+			and signal_pressure_label.text == "Market pressure: —"
+		)
+		signal_instance.queue_free()
+		await process_frame
 
 	root.add_child(main_instance)
 	await process_frame
@@ -193,6 +337,27 @@ func _run_tests() -> void:
 	) as Label
 	var developer_api_market_label: Label = main_instance.get_node_or_null(
 		^"DashboardMargin/Dashboard/MarketsGrid/DeveloperApiMarketLabel"
+	) as Label
+	var rival_heading: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/RivalHeading"
+	) as Label
+	var rival_signal_label: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/RivalGrid/RivalSignalLabel"
+	) as Label
+	var rival_last_action_label: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/RivalGrid/RivalLastActionLabel"
+	) as Label
+	var rival_reason_label: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/RivalGrid/RivalReasonLabel"
+	) as Label
+	var rival_quarter_label: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/RivalGrid/RivalQuarterLabel"
+	) as Label
+	var rival_utility_label: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/RivalGrid/RivalUtilityLabel"
+	) as Label
+	var rival_market_pressure_label: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/RivalGrid/RivalMarketPressureLabel"
 	) as Label
 	var project_heading: Label = main_instance.get_node_or_null(
 		^"DashboardMargin/Dashboard/ProjectHeading"
@@ -290,38 +455,22 @@ func _run_tests() -> void:
 		and developer_api_market_label.text
 			== "Developer/API: 2,000 bps | workload 20 | 90,000 cents/month"
 	)
-
-	if training_units_spin_box != null:
-		training_units_spin_box.value = 70.0
-	if apply_compute_plan_button != null:
-		apply_compute_plan_button.pressed.emit()
-	await process_frame
-	var applied_compute_exact: bool = (
-		compute_plan_label != null
-		and compute_plan_label.text
-			== "Compute/month: 100 = 70 training + 20 inference + 10 reserve"
-		and date_label != null
-		and date_label.text == "2026 Q1"
-		and cash_label != null
-		and cash_label.text == "Cash: 1,000,000 cents"
-		and revenue_label != null
-		and revenue_label.text == "Monthly revenue: 120,000 cents"
-		and operating_cost_label != null
-		and operating_cost_label.text == "Monthly operating cost: 80,000 cents"
-		and project_label != null
-		and project_label.text == "Project: project_alpha — NOT STARTED 0/3"
-		and training_work_label != null
-		and training_work_label.text == "Training work: 0 compute-unit-months"
-		and inference_served_label != null
-		and inference_served_label.text == "Inference served: 0/0 compute-unit-months"
-	)
-	var applied_market_exact: bool = (
-		consumer_market_label != null
-		and consumer_market_label.text
-			== "Consumer: 3,000 bps | workload 30 | 30,000 cents/month"
-		and developer_api_market_label != null
-		and developer_api_market_label.text
-			== "Developer/API: 2,000 bps | workload 20 | 90,000 cents/month"
+	var initial_rival_exact: bool = (
+		rival_heading != null
+		and rival_heading.text == "RIVAL"
+		and rival_signal_label != null
+		and rival_signal_label.text
+			== "Northstar Labs signal: 70 training / 20 inference"
+		and rival_reason_label != null
+		and rival_reason_label.text == "Why: Close training gap"
+		and rival_utility_label != null
+		and rival_utility_label.text == "Utility: 688 = 680 + 8 seeded noise"
+		and rival_last_action_label != null
+		and rival_last_action_label.text == "Last action: —"
+		and rival_quarter_label != null
+		and rival_quarter_label.text == "Quarter: —"
+		and rival_market_pressure_label != null
+		and rival_market_pressure_label.text == "Market pressure: —"
 	)
 
 	if primary_button != null:
@@ -349,6 +498,21 @@ func _run_tests() -> void:
 		and developer_api_market_label.text
 			== "Developer/API: 2,000 bps | workload 20 | 90,000 cents/month"
 	)
+	var first_press_rival_exact: bool = (
+		rival_signal_label != null
+		and rival_signal_label.text
+			== "Northstar Labs signal: 70 training / 20 inference"
+		and rival_reason_label != null
+		and rival_reason_label.text == "Why: Close training gap"
+		and rival_utility_label != null
+		and rival_utility_label.text == "Utility: 688 = 680 + 8 seeded noise"
+		and rival_last_action_label != null
+		and rival_last_action_label.text == "Last action: —"
+		and rival_quarter_label != null
+		and rival_quarter_label.text == "Quarter: —"
+		and rival_market_pressure_label != null
+		and rival_market_pressure_label.text == "Market pressure: —"
+	)
 	_check(first_press_exact, "First press starts only the fixed project")
 
 	if primary_button != null:
@@ -358,9 +522,9 @@ func _run_tests() -> void:
 		date_label != null
 		and date_label.text == "2026 Q2"
 		and cash_label != null
-		and cash_label.text == "Cash: 912,640 cents"
+		and cash_label.text == "Cash: 1,071,130 cents"
 		and revenue_label != null
-		and revenue_label.text == "Monthly revenue: 59,640 cents"
+		and revenue_label.text == "Monthly revenue: 146,130 cents"
 		and operating_cost_label != null
 		and operating_cost_label.text == "Monthly operating cost: 80,000 cents"
 		and project_label != null
@@ -369,10 +533,10 @@ func _run_tests() -> void:
 		and primary_button.text == "NEXT QUARTER"
 		and cash_explanation_label != null
 		and cash_explanation_label.text
-			== "Cash: 1,000,000 → 912,640 = -87,360 cents"
+			== "Cash: 1,000,000 → 1,071,130 = +71,130 cents"
 		and revenue_contribution_label != null
 		and revenue_contribution_label.text
-			== "Revenue cash contributions: +227,640 cents"
+			== "Revenue cash contributions: +386,130 cents"
 		and operating_cost_contribution_label != null
 		and operating_cost_contribution_label.text
 			== "Operating-cost contributions: -240,000 cents"
@@ -392,10 +556,10 @@ func _run_tests() -> void:
 	var final_market_exact: bool = (
 		consumer_market_label != null
 		and consumer_market_label.text
-			== "Consumer: served 36/90, share -540 → 2,460 bps, revenue -20,160 → 9,840"
+			== "Consumer: served 90/90, share +18 → 3,018 bps, revenue +180 → 30,180"
 		and developer_api_market_label != null
 		and developer_api_market_label.text
-			== "Developer/API: served 24/60, share -900 → 1,100 bps, revenue -70,200 → 19,800"
+			== "Developer/API: served 60/60, share -90 → 1,910 bps, revenue -4,050 → 85,950"
 	)
 	TEST_MARKET_SESSION_DASHBOARD_SCRIPT.report_dashboard_scene(
 		Callable(self, "_check"),
@@ -407,17 +571,44 @@ func _run_tests() -> void:
 	var final_compute_exact: bool = (
 		compute_plan_label != null
 		and compute_plan_label.text
-			== "Compute/month: 100 = 70 training + 20 inference + 10 reserve"
+			== "Compute/month: 100 = 40 training + 50 inference + 10 reserve"
 		and training_work_label != null
-		and training_work_label.text == "Training work: +210 compute-unit-months"
+		and training_work_label.text == "Training work: +120 compute-unit-months"
 		and inference_served_label != null
-		and inference_served_label.text == "Inference served: 60/150 compute-unit-months"
+		and inference_served_label.text == "Inference served: 150/150 compute-unit-months"
 		and inference_unmet_label != null
-		and inference_unmet_label.text == "Inference unmet: 90 compute-unit-months"
+		and inference_unmet_label.text == "Inference unmet: 0 compute-unit-months"
 	)
 	TEST_COMPUTE_SESSION_DASHBOARD_SCRIPT.report_dashboard_scene(
 		Callable(self, "_check"),
 		initial_compute_exact and applied_compute_exact and final_compute_exact
+	)
+	var final_rival_exact: bool = (
+		rival_signal_label != null
+		and rival_signal_label.text
+			== "Next signal: 40 training / 50 inference — Defend market position"
+		and rival_reason_label != null
+		and rival_reason_label.text == "Why: Defend market position"
+		and rival_utility_label != null
+		and rival_utility_label.text == "Utility: 553 = 549 + 4 seeded noise"
+		and rival_last_action_label != null
+		and rival_last_action_label.text == "Last action: 70 training / 20 inference"
+		and rival_quarter_label != null
+		and rival_quarter_label.text
+			== "Quarter: +210 training; inference 60/150; unmet 90"
+		and rival_market_pressure_label != null
+		and rival_market_pressure_label.text
+			== "Market pressure: Consumer -72 bps; Developer/API -120 bps"
+	)
+	TEST_OPPONENT_SESSION_DASHBOARD_SCRIPT.report_dashboard_scene(
+		Callable(self, "_check"),
+		signal_stability_exact
+			and initial_rival_exact
+			and first_press_rival_exact
+			and final_scene_exact
+			and final_market_exact
+			and final_compute_exact
+			and final_rival_exact
 	)
 
 	var visible_controls: Array[Control] = [
@@ -439,6 +630,13 @@ func _run_tests() -> void:
 		markets_heading,
 		consumer_market_label,
 		developer_api_market_label,
+		rival_heading,
+		rival_signal_label,
+		rival_last_action_label,
+		rival_reason_label,
+		rival_quarter_label,
+		rival_utility_label,
+		rival_market_pressure_label,
 		project_heading,
 		project_label,
 		primary_button,
@@ -485,6 +683,10 @@ func _run_tests() -> void:
 		fits_1280 and fits_1920
 	)
 	TEST_MARKET_SESSION_DASHBOARD_SCRIPT.report_dashboard_layout(
+		Callable(self, "_check"),
+		fits_1280 and fits_1920
+	)
+	TEST_OPPONENT_SESSION_DASHBOARD_SCRIPT.report_dashboard_layout(
 		Callable(self, "_check"),
 		fits_1280 and fits_1920
 	)

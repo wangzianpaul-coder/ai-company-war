@@ -25,6 +25,12 @@ var _inference_served_text: String
 var _inference_unmet_text: String
 var _consumer_market_text: String
 var _developer_api_market_text: String
+var _rival_signal_text: String
+var _rival_reason_text: String
+var _rival_utility_text: String
+var _rival_last_action_text: String
+var _rival_quarter_text: String
+var _rival_market_pressure_text: String
 
 
 ## Stores primitive display values without exposing mutation methods.
@@ -51,7 +57,13 @@ func _init(
 	p_inference_served_text: String,
 	p_inference_unmet_text: String,
 	p_consumer_market_text: String,
-	p_developer_api_market_text: String
+	p_developer_api_market_text: String,
+	p_rival_signal_text: String = "",
+	p_rival_reason_text: String = "",
+	p_rival_utility_text: String = "",
+	p_rival_last_action_text: String = "",
+	p_rival_quarter_text: String = "",
+	p_rival_market_pressure_text: String = ""
 ) -> void:
 	_title_text = p_title_text
 	_date_text = p_date_text
@@ -78,6 +90,12 @@ func _init(
 	_inference_unmet_text = p_inference_unmet_text
 	_consumer_market_text = p_consumer_market_text
 	_developer_api_market_text = p_developer_api_market_text
+	_rival_signal_text = p_rival_signal_text
+	_rival_reason_text = p_rival_reason_text
+	_rival_utility_text = p_rival_utility_text
+	_rival_last_action_text = p_rival_last_action_text
+	_rival_quarter_text = p_rival_quarter_text
+	_rival_market_pressure_text = p_rival_market_pressure_text
 
 
 func get_title_text() -> String:
@@ -170,3 +188,27 @@ func get_consumer_market_text() -> String:
 
 func get_developer_api_market_text() -> String:
 	return _developer_api_market_text
+
+
+func get_rival_signal_text() -> String:
+	return _rival_signal_text
+
+
+func get_rival_reason_text() -> String:
+	return _rival_reason_text
+
+
+func get_rival_utility_text() -> String:
+	return _rival_utility_text
+
+
+func get_rival_last_action_text() -> String:
+	return _rival_last_action_text
+
+
+func get_rival_quarter_text() -> String:
+	return _rival_quarter_text
+
+
+func get_rival_market_pressure_text() -> String:
+	return _rival_market_pressure_text

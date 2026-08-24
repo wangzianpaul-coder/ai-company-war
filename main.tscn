@@ -30,13 +30,13 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/margin_left = 64
-theme_override_constants/margin_top = 24
+theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 64
-theme_override_constants/margin_bottom = 24
+theme_override_constants/margin_bottom = 8
 
 [node name="Dashboard" type="VBoxContainer" parent="DashboardMargin"]
 layout_mode = 2
-theme_override_constants/separation = 5
+theme_override_constants/separation = 1
 script = ExtResource("2_dashboard")
 
 [node name="Header" type="HBoxContainer" parent="DashboardMargin/Dashboard"]
@@ -107,7 +107,7 @@ text = "Training units/month"
 vertical_alignment = 1
 
 [node name="TrainingUnitsSpinBox" type="SpinBox" parent="DashboardMargin/Dashboard/ComputePlanControls"]
-custom_minimum_size = Vector2(120, 40)
+custom_minimum_size = Vector2(120, 36)
 layout_mode = 2
 max_value = 90.0
 step = 1.0
@@ -121,7 +121,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 
 [node name="ApplyComputePlanButton" type="Button" parent="DashboardMargin/Dashboard/ComputePlanControls"]
-custom_minimum_size = Vector2(220, 40)
+custom_minimum_size = Vector2(220, 36)
 layout_mode = 2
 text = "APPLY COMPUTE PLAN"
 
@@ -147,6 +147,53 @@ size_flags_horizontal = 3
 text = "Developer/API: 2,000 bps | workload 20 | 90,000 cents/month"
 autowrap_mode = 2
 
+[node name="RivalHeading" type="Label" parent="DashboardMargin/Dashboard"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "RIVAL"
+
+[node name="RivalGrid" type="GridContainer" parent="DashboardMargin/Dashboard"]
+layout_mode = 2
+theme_override_constants/h_separation = 24
+theme_override_constants/v_separation = 0
+columns = 2
+
+[node name="RivalSignalLabel" type="Label" parent="DashboardMargin/Dashboard/RivalGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Northstar Labs signal: 70 training / 20 inference"
+autowrap_mode = 2
+
+[node name="RivalLastActionLabel" type="Label" parent="DashboardMargin/Dashboard/RivalGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Last action: —"
+autowrap_mode = 2
+
+[node name="RivalReasonLabel" type="Label" parent="DashboardMargin/Dashboard/RivalGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Why: Close training gap"
+autowrap_mode = 2
+
+[node name="RivalQuarterLabel" type="Label" parent="DashboardMargin/Dashboard/RivalGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Quarter: —"
+autowrap_mode = 2
+
+[node name="RivalUtilityLabel" type="Label" parent="DashboardMargin/Dashboard/RivalGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Utility: 688 = 680 + 8 seeded noise"
+autowrap_mode = 2
+
+[node name="RivalMarketPressureLabel" type="Label" parent="DashboardMargin/Dashboard/RivalGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Market pressure: —"
+autowrap_mode = 2
+
 [node name="ProjectHeading" type="Label" parent="DashboardMargin/Dashboard"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
@@ -157,7 +204,7 @@ layout_mode = 2
 text = "Project: project_alpha — NOT STARTED 0/3"
 
 [node name="PrimaryButton" type="Button" parent="DashboardMargin/Dashboard"]
-custom_minimum_size = Vector2(0, 48)
+custom_minimum_size = Vector2(0, 44)
 layout_mode = 2
 text = "START PROJECT"
 

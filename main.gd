@@ -5,6 +5,9 @@ const CompanyStateType = preload("res://simulation/state/company_state.gd")
 const ProjectStateType = preload("res://simulation/state/project_state.gd")
 const ComputeStateType = preload("res://simulation/state/compute_state.gd")
 const MarketStateType = preload("res://simulation/state/market_state.gd")
+const OpponentStateType = preload("res://simulation/state/opponent_state.gd")
+const OpponentPersonalityType = preload("res://simulation/ai/opponent_personality.gd")
+const NamedRngStateType = preload("res://simulation/rng/named_rng_state.gd")
 const GameStateType = preload("res://simulation/state/game_state.gd")
 const GameSessionType = preload("res://application/game_session.gd")
 const DashboardType = preload("res://ui/screens/dashboard.gd")
@@ -35,6 +38,11 @@ const DEMO_CONSUMER_CURRENT_SERVED_UNITS_PER_MONTH: int = 30
 const DEMO_DEVELOPER_API_CURRENT_SERVED_UNITS_PER_MONTH: int = 20
 const DEMO_CONSUMER_CURRENT_MARKET_REVENUE_CENTS: int = 30_000
 const DEMO_DEVELOPER_API_CURRENT_MARKET_REVENUE_CENTS: int = 90_000
+const DEMO_OPPONENT_ID: StringName = &"northstar_labs"
+const DEMO_OPPONENT_DISPLAY_NAME: String = "Northstar Labs"
+const DEMO_OPPONENT_PRESSURE_CONSUMER_BPS_PER_SERVED_UNIT: int = 2
+const DEMO_OPPONENT_PRESSURE_DEVELOPER_API_BPS_PER_SERVED_UNIT: int = 5
+const DEMO_AI_MASTER_SEED: int = 7
 
 @onready var dashboard: DashboardType = $DashboardMargin/Dashboard as DashboardType
 
@@ -74,13 +82,57 @@ func _ready() -> void:
 		DEMO_CONSUMER_CURRENT_SERVED_UNITS_PER_MONTH,
 		DEMO_DEVELOPER_API_CURRENT_SERVED_UNITS_PER_MONTH,
 		DEMO_CONSUMER_CURRENT_MARKET_REVENUE_CENTS,
-		DEMO_DEVELOPER_API_CURRENT_MARKET_REVENUE_CENTS
+		DEMO_DEVELOPER_API_CURRENT_MARKET_REVENUE_CENTS,
+		0,
+		0,
+		0,
+		0,
+		DEMO_OPPONENT_PRESSURE_CONSUMER_BPS_PER_SERVED_UNIT,
+		DEMO_OPPONENT_PRESSURE_DEVELOPER_API_BPS_PER_SERVED_UNIT
+	)
+	var demo_opponent_compute: ComputeStateType = ComputeStateType.new(
+		DEMO_TOTAL_COMPUTE_UNITS_PER_MONTH,
+		DEMO_RESERVE_COMPUTE_UNITS_PER_MONTH,
+		DEMO_INFERENCE_WORKLOAD_UNITS_PER_MONTH,
+		DEMO_TRAINING_ALLOCATION_UNITS_PER_MONTH
+	)
+	var demo_opponent: OpponentStateType = OpponentStateType.new(
+		DEMO_OPPONENT_ID,
+		demo_opponent_compute
+	)
+	var demo_candidates: Array[OpponentPersonalityType.Candidate] = [
+		OpponentPersonalityType.Candidate.new(
+			OpponentPersonalityType.CANDIDATE_PLAN_40_DEFEND_MARKETS,
+			40,
+			OpponentPersonalityType.REASON_DEFEND_MARKET_POSITION,
+			OpponentPersonalityType.UTILITY_RULE_DEFEND_MARKETS
+		),
+		OpponentPersonalityType.Candidate.new(
+			OpponentPersonalityType.CANDIDATE_PLAN_70_CLOSE_TRAINING_GAP,
+			70,
+			OpponentPersonalityType.REASON_CLOSE_TRAINING_GAP,
+			OpponentPersonalityType.UTILITY_RULE_CLOSE_TRAINING_GAP
+		),
+	]
+	var demo_personality: OpponentPersonalityType = OpponentPersonalityType.new(
+		DEMO_OPPONENT_ID,
+		DEMO_OPPONENT_DISPLAY_NAME,
+		demo_candidates,
+		500,
+		100,
+		500,
+		180
+	)
+	var demo_named_rng: NamedRngStateType = (
+		NamedRngStateType.create_fresh_version_one(DEMO_AI_MASTER_SEED)
 	)
 	var demo_state: GameStateType = GameStateType.new(
 		demo_company,
 		demo_project,
 		demo_compute,
-		demo_market
+		demo_market,
+		demo_opponent,
+		demo_named_rng
 	)
-	_game_session = GameSessionType.new(demo_state)
+	_game_session = GameSessionType.new(demo_state, demo_personality)
 	dashboard.initialize(_game_session)

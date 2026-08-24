@@ -26,6 +26,8 @@ var _consumer_cumulative_served_compute_unit_months: int
 var _consumer_cumulative_unmet_compute_unit_months: int
 var _developer_api_cumulative_served_compute_unit_months: int
 var _developer_api_cumulative_unmet_compute_unit_months: int
+var _consumer_opponent_pressure_bps_per_served_unit: int
+var _developer_api_opponent_pressure_bps_per_served_unit: int
 
 
 ## Stores the two fixed markets. The all-zero default is valid and inert.
@@ -48,7 +50,9 @@ func _init(
 	p_consumer_cumulative_served_compute_unit_months: int = 0,
 	p_consumer_cumulative_unmet_compute_unit_months: int = 0,
 	p_developer_api_cumulative_served_compute_unit_months: int = 0,
-	p_developer_api_cumulative_unmet_compute_unit_months: int = 0
+	p_developer_api_cumulative_unmet_compute_unit_months: int = 0,
+	p_consumer_opponent_pressure_bps_per_served_unit: int = 0,
+	p_developer_api_opponent_pressure_bps_per_served_unit: int = 0
 ) -> void:
 	_consumer_workload_units_per_month = p_consumer_workload_units_per_month
 	_developer_api_workload_units_per_month = p_developer_api_workload_units_per_month
@@ -83,6 +87,12 @@ func _init(
 	_developer_api_cumulative_unmet_compute_unit_months = (
 		p_developer_api_cumulative_unmet_compute_unit_months
 	)
+	_consumer_opponent_pressure_bps_per_served_unit = (
+		p_consumer_opponent_pressure_bps_per_served_unit
+	)
+	_developer_api_opponent_pressure_bps_per_served_unit = (
+		p_developer_api_opponent_pressure_bps_per_served_unit
+	)
 
 
 ## Returns a full independent copy of configuration, current values and totals.
@@ -106,7 +116,9 @@ func copy() -> MarketState:
 		_consumer_cumulative_served_compute_unit_months,
 		_consumer_cumulative_unmet_compute_unit_months,
 		_developer_api_cumulative_served_compute_unit_months,
-		_developer_api_cumulative_unmet_compute_unit_months
+		_developer_api_cumulative_unmet_compute_unit_months,
+		_consumer_opponent_pressure_bps_per_served_unit,
+		_developer_api_opponent_pressure_bps_per_served_unit
 	)
 
 
@@ -196,6 +208,14 @@ func get_developer_api_cumulative_served_compute_unit_months() -> int:
 
 func get_developer_api_cumulative_unmet_compute_unit_months() -> int:
 	return _developer_api_cumulative_unmet_compute_unit_months
+
+
+func get_consumer_opponent_pressure_bps_per_served_unit() -> int:
+	return _consumer_opponent_pressure_bps_per_served_unit
+
+
+func get_developer_api_opponent_pressure_bps_per_served_unit() -> int:
+	return _developer_api_opponent_pressure_bps_per_served_unit
 
 
 ## Commits one fully validated month. MarketSystem calculates every argument first.

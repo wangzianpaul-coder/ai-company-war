@@ -19,13 +19,16 @@ const MAX_WORKLOAD_FOR_BASIS_POINT_CONVERSION: int = MAX_SIGNED_INT / TOTAL_BASI
 func settle_month(
 	company_state: CompanyStateType,
 	compute_state: ComputeStateType,
-	market_state: MarketStateType
+	market_state: MarketStateType,
+	opponent_compute_state: ComputeStateType = null
 ) -> EffectBatchResultType:
 	if not _is_company_state_valid(company_state) or not _is_compute_state_valid(compute_state):
 		return _failed(EffectBatchResultType.ErrorCode.INVALID_STATE)
 	if market_state == null:
 		return _failed(EffectBatchResultType.ErrorCode.INVALID_STATE)
 	if _is_zero_market_state(market_state):
+		if opponent_compute_state != null:
+			return _failed(EffectBatchResultType.ErrorCode.INVALID_STATE)
 		var no_market_contributions: Array[EffectContributionType] = []
 		return EffectBatchResultType.new(
 			EffectBatchResultType.ErrorCode.NONE,
@@ -49,6 +52,64 @@ func settle_month(
 	):
 		return _failed(EffectBatchResultType.ErrorCode.INVALID_STATE)
 
+	var consumer_workload: int = market_state.get_consumer_workload_units_per_month()
+	var developer_api_workload: int = (
+		market_state.get_developer_api_workload_units_per_month()
+	)
+	if not _can_add_non_negative(consumer_workload, developer_api_workload):
+		return _failed(EffectBatchResultType.ErrorCode.ARITHMETIC_OVERFLOW)
+	var total_market_workload: int = consumer_workload + developer_api_workload
+
+	var opponent_consumer_served: int = 0
+	var opponent_developer_api_served: int = 0
+	if opponent_compute_state == null:
+		if (
+			market_state.get_consumer_opponent_pressure_bps_per_served_unit() != 0
+			or market_state.get_developer_api_opponent_pressure_bps_per_served_unit() != 0
+		):
+			return _failed(EffectBatchResultType.ErrorCode.INVALID_STATE)
+	else:
+		if not _is_compute_state_valid(opponent_compute_state):
+			return _failed(EffectBatchResultType.ErrorCode.INVALID_STATE)
+		if (
+			opponent_compute_state.get_inference_workload_units_per_month()
+			!= total_market_workload
+		):
+			return _failed(EffectBatchResultType.ErrorCode.INVALID_STATE)
+		var opponent_served: int = (
+			opponent_compute_state.get_served_inference_units_per_month()
+		)
+		var opponent_unmet: int = (
+			opponent_compute_state.get_unmet_inference_units_per_month()
+		)
+		if (
+			not _can_add_non_negative(opponent_served, opponent_unmet)
+			or opponent_served + opponent_unmet != total_market_workload
+		):
+			return _failed(EffectBatchResultType.ErrorCode.INVALID_STATE)
+		opponent_consumer_served = _floor_by_basis_points(
+			opponent_served,
+			market_state.get_consumer_service_allocation_bps()
+		)
+		if opponent_consumer_served < 0:
+			return _failed(EffectBatchResultType.ErrorCode.ARITHMETIC_OVERFLOW)
+		opponent_consumer_served = mini(opponent_consumer_served, consumer_workload)
+		if not _can_subtract(opponent_served, opponent_consumer_served):
+			return _failed(EffectBatchResultType.ErrorCode.ARITHMETIC_OVERFLOW)
+		opponent_developer_api_served = mini(
+			opponent_served - opponent_consumer_served,
+			developer_api_workload
+		)
+		if (
+			not _can_add_non_negative(
+				opponent_consumer_served,
+				opponent_developer_api_served
+			)
+			or opponent_consumer_served + opponent_developer_api_served
+				!= opponent_served
+		):
+			return _failed(EffectBatchResultType.ErrorCode.INVALID_STATE)
+
 	var consumer_served: int = _floor_by_basis_points(
 		compute_served,
 		market_state.get_consumer_service_allocation_bps()
@@ -70,10 +131,6 @@ func settle_month(
 	if consumer_served + developer_api_served != compute_served:
 		return _failed(EffectBatchResultType.ErrorCode.INVALID_STATE)
 
-	var consumer_workload: int = market_state.get_consumer_workload_units_per_month()
-	var developer_api_workload: int = (
-		market_state.get_developer_api_workload_units_per_month()
-	)
 	if (
 		not _can_subtract(consumer_workload, consumer_served)
 		or not _can_subtract(developer_api_workload, developer_api_served)
@@ -82,13 +139,15 @@ func settle_month(
 	var consumer_unmet: int = consumer_workload - consumer_served
 	var developer_api_unmet: int = developer_api_workload - developer_api_served
 
-	var consumer_share_delta: int = market_state.get_consumer_full_service_growth_bps()
+	var consumer_organic_share_delta: int = (
+		market_state.get_consumer_full_service_growth_bps()
+	)
 	if consumer_unmet != 0:
 		var consumer_penalty: int = market_state.get_consumer_unmet_penalty_bps_per_unit()
 		if not _can_multiply_non_negative(consumer_unmet, consumer_penalty):
 			return _failed(EffectBatchResultType.ErrorCode.ARITHMETIC_OVERFLOW)
-		consumer_share_delta = -(consumer_unmet * consumer_penalty)
-	var developer_api_share_delta: int = (
+		consumer_organic_share_delta = -(consumer_unmet * consumer_penalty)
+	var developer_api_organic_share_delta: int = (
 		market_state.get_developer_api_full_service_growth_bps()
 	)
 	if developer_api_unmet != 0:
@@ -97,32 +156,88 @@ func settle_month(
 		)
 		if not _can_multiply_non_negative(developer_api_unmet, developer_api_penalty):
 			return _failed(EffectBatchResultType.ErrorCode.ARITHMETIC_OVERFLOW)
-		developer_api_share_delta = -(developer_api_unmet * developer_api_penalty)
+		developer_api_organic_share_delta = -(developer_api_unmet * developer_api_penalty)
 
 	var consumer_share_before: int = market_state.get_consumer_player_share_bps()
 	var developer_api_share_before: int = market_state.get_developer_api_player_share_bps()
 	if (
-		not _can_add(consumer_share_before, consumer_share_delta)
-		or not _can_add(developer_api_share_before, developer_api_share_delta)
+		not _can_add(consumer_share_before, consumer_organic_share_delta)
+		or not _can_add(
+			developer_api_share_before,
+			developer_api_organic_share_delta
+		)
 	):
 		return _failed(EffectBatchResultType.ErrorCode.ARITHMETIC_OVERFLOW)
-	var consumer_share_after: int = clampi(
-		consumer_share_before + consumer_share_delta,
+	var consumer_share_after_organic: int = clampi(
+		consumer_share_before + consumer_organic_share_delta,
 		0,
 		TOTAL_BASIS_POINTS
 	)
-	var developer_api_share_after: int = clampi(
-		developer_api_share_before + developer_api_share_delta,
+	var developer_api_share_after_organic: int = clampi(
+		developer_api_share_before + developer_api_organic_share_delta,
 		0,
 		TOTAL_BASIS_POINTS
 	)
 	if (
-		not _can_subtract(consumer_share_after, consumer_share_before)
-		or not _can_subtract(developer_api_share_after, developer_api_share_before)
+		not _can_subtract(consumer_share_after_organic, consumer_share_before)
+		or not _can_subtract(
+			developer_api_share_after_organic,
+			developer_api_share_before
+		)
 	):
 		return _failed(EffectBatchResultType.ErrorCode.ARITHMETIC_OVERFLOW)
-	consumer_share_delta = consumer_share_after - consumer_share_before
-	developer_api_share_delta = developer_api_share_after - developer_api_share_before
+	consumer_organic_share_delta = consumer_share_after_organic - consumer_share_before
+	developer_api_organic_share_delta = (
+		developer_api_share_after_organic - developer_api_share_before
+	)
+
+	var consumer_pressure_rate: int = (
+		market_state.get_consumer_opponent_pressure_bps_per_served_unit()
+	)
+	var developer_api_pressure_rate: int = (
+		market_state.get_developer_api_opponent_pressure_bps_per_served_unit()
+	)
+	if (
+		not _can_multiply_non_negative(opponent_consumer_served, consumer_pressure_rate)
+		or not _can_multiply_non_negative(
+			opponent_developer_api_served,
+			developer_api_pressure_rate
+		)
+	):
+		return _failed(EffectBatchResultType.ErrorCode.ARITHMETIC_OVERFLOW)
+	var consumer_pressure: int = opponent_consumer_served * consumer_pressure_rate
+	var developer_api_pressure: int = (
+		opponent_developer_api_served * developer_api_pressure_rate
+	)
+	if (
+		not _can_add(consumer_share_after_organic, -consumer_pressure)
+		or not _can_add(developer_api_share_after_organic, -developer_api_pressure)
+	):
+		return _failed(EffectBatchResultType.ErrorCode.ARITHMETIC_OVERFLOW)
+	var consumer_share_after: int = clampi(
+		consumer_share_after_organic - consumer_pressure,
+		0,
+		TOTAL_BASIS_POINTS
+	)
+	var developer_api_share_after: int = clampi(
+		developer_api_share_after_organic - developer_api_pressure,
+		0,
+		TOTAL_BASIS_POINTS
+	)
+	if (
+		not _can_subtract(consumer_share_after, consumer_share_after_organic)
+		or not _can_subtract(
+			developer_api_share_after,
+			developer_api_share_after_organic
+		)
+	):
+		return _failed(EffectBatchResultType.ErrorCode.ARITHMETIC_OVERFLOW)
+	var consumer_opponent_pressure_delta: int = (
+		consumer_share_after - consumer_share_after_organic
+	)
+	var developer_api_opponent_pressure_delta: int = (
+		developer_api_share_after - developer_api_share_after_organic
+	)
 
 	var consumer_revenue_after: int = _calculate_market_revenue(
 		market_state.get_consumer_addressable_monthly_revenue_cents(),
@@ -226,7 +341,8 @@ func settle_month(
 		EffectContributionType.SUBJECT_CONSUMER,
 		consumer_served,
 		consumer_unmet,
-		consumer_share_delta,
+		consumer_organic_share_delta,
+		consumer_opponent_pressure_delta,
 		consumer_revenue_delta
 	)
 	_append_market_contributions(
@@ -234,7 +350,8 @@ func settle_month(
 		EffectContributionType.SUBJECT_DEVELOPER_API,
 		developer_api_served,
 		developer_api_unmet,
-		developer_api_share_delta,
+		developer_api_organic_share_delta,
+		developer_api_opponent_pressure_delta,
 		developer_api_revenue_delta
 	)
 
@@ -281,6 +398,8 @@ func _validate_market_state(
 		or market_state.get_consumer_cumulative_unmet_compute_unit_months() < 0
 		or market_state.get_developer_api_cumulative_served_compute_unit_months() < 0
 		or market_state.get_developer_api_cumulative_unmet_compute_unit_months() < 0
+		or market_state.get_consumer_opponent_pressure_bps_per_served_unit() < 0
+		or market_state.get_developer_api_opponent_pressure_bps_per_served_unit() < 0
 	):
 		return EffectBatchResultType.ErrorCode.INVALID_STATE
 	if (
@@ -431,6 +550,8 @@ func _is_zero_market_state(market_state: MarketStateType) -> bool:
 		and market_state.get_consumer_cumulative_unmet_compute_unit_months() == 0
 		and market_state.get_developer_api_cumulative_served_compute_unit_months() == 0
 		and market_state.get_developer_api_cumulative_unmet_compute_unit_months() == 0
+		and market_state.get_consumer_opponent_pressure_bps_per_served_unit() == 0
+		and market_state.get_developer_api_opponent_pressure_bps_per_served_unit() == 0
 	)
 
 
@@ -439,7 +560,8 @@ func _append_market_contributions(
 	subject_key: StringName,
 	served: int,
 	unmet: int,
-	share_delta: int,
+	organic_share_delta: int,
+	opponent_pressure_delta: int,
 	revenue_delta: int
 ) -> void:
 	if served != 0:
@@ -460,14 +582,23 @@ func _append_market_contributions(
 			EffectContributionType.Unit.COMPUTE_UNIT_MONTHS,
 			unmet
 		))
-	if share_delta != 0:
+	if organic_share_delta != 0:
 		contributions.append(EffectContributionType.new(
 			EffectContributionType.SOURCE_MARKET,
 			EffectContributionType.REASON_MARKET_SHARE_CHANGE,
 			subject_key,
 			EffectContributionType.METRIC_PLAYER_SHARE_BPS,
 			EffectContributionType.Unit.BASIS_POINTS,
-			share_delta
+			organic_share_delta
+		))
+	if opponent_pressure_delta != 0:
+		contributions.append(EffectContributionType.new(
+			EffectContributionType.SOURCE_MARKET,
+			EffectContributionType.REASON_OPPONENT_MARKET_PRESSURE,
+			subject_key,
+			EffectContributionType.METRIC_PLAYER_SHARE_BPS,
+			EffectContributionType.Unit.BASIS_POINTS,
+			opponent_pressure_delta
 		))
 	if revenue_delta != 0:
 		contributions.append(EffectContributionType.new(

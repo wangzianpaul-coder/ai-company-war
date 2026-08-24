@@ -24,6 +24,12 @@ const SetComputeAllocationCommandType = preload(
 )
 @onready var consumer_market_label: Label = $MarketsGrid/ConsumerMarketLabel
 @onready var developer_api_market_label: Label = $MarketsGrid/DeveloperApiMarketLabel
+@onready var rival_signal_label: Label = $RivalGrid/RivalSignalLabel
+@onready var rival_last_action_label: Label = $RivalGrid/RivalLastActionLabel
+@onready var rival_reason_label: Label = $RivalGrid/RivalReasonLabel
+@onready var rival_quarter_label: Label = $RivalGrid/RivalQuarterLabel
+@onready var rival_utility_label: Label = $RivalGrid/RivalUtilityLabel
+@onready var rival_market_pressure_label: Label = $RivalGrid/RivalMarketPressureLabel
 @onready var cash_explanation_label: Label = $Explanation/CashReconciliationLabel
 @onready var revenue_contribution_label: Label = $Explanation/RevenueContributionLabel
 @onready var operating_cost_contribution_label: Label = $Explanation/OperatingCostContributionLabel
@@ -94,6 +100,12 @@ func _refresh(view_model: DashboardViewModelType) -> void:
 	inference_workload_label.text = view_model.get_inference_workload_text()
 	consumer_market_label.text = view_model.get_consumer_market_text()
 	developer_api_market_label.text = view_model.get_developer_api_market_text()
+	rival_signal_label.text = view_model.get_rival_signal_text()
+	rival_last_action_label.text = view_model.get_rival_last_action_text()
+	rival_reason_label.text = view_model.get_rival_reason_text()
+	rival_quarter_label.text = view_model.get_rival_quarter_text()
+	rival_utility_label.text = view_model.get_rival_utility_text()
+	rival_market_pressure_label.text = view_model.get_rival_market_pressure_text()
 	training_units_spin_box.max_value = float(
 		view_model.get_maximum_training_allocation_units_per_month()
 	)

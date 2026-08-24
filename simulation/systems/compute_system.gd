@@ -28,8 +28,16 @@ func set_training_allocation(
 
 ## Settles one non-bankable capacity month in training, served, unmet order.
 ## All cumulative additions are checked before state or effects are committed.
-func advance_month(compute_state: ComputeStateType) -> EffectBatchResultType:
+func advance_month(
+	compute_state: ComputeStateType,
+	contribution_subject: StringName = EffectContributionType.SUBJECT_COMPANY
+) -> EffectBatchResultType:
 	if not _is_compute_state_valid(compute_state):
+		return _failed(EffectBatchResultType.ErrorCode.INVALID_STATE)
+	if (
+		contribution_subject != EffectContributionType.SUBJECT_COMPANY
+		and contribution_subject != EffectContributionType.SUBJECT_NORTHSTAR_LABS
+	):
 		return _failed(EffectBatchResultType.ErrorCode.INVALID_STATE)
 
 	var training_work: int = compute_state.get_training_allocation_units_per_month()
@@ -60,7 +68,7 @@ func advance_month(compute_state: ComputeStateType) -> EffectBatchResultType:
 		contributions.append(EffectContributionType.new(
 			EffectContributionType.SOURCE_COMPUTE,
 			EffectContributionType.REASON_TRAINING_WORK,
-			EffectContributionType.SUBJECT_COMPANY,
+			contribution_subject,
 			EffectContributionType.METRIC_CUMULATIVE_TRAINING_COMPUTE_UNIT_MONTHS,
 			EffectContributionType.Unit.COMPUTE_UNIT_MONTHS,
 			training_work
@@ -69,7 +77,7 @@ func advance_month(compute_state: ComputeStateType) -> EffectBatchResultType:
 		contributions.append(EffectContributionType.new(
 			EffectContributionType.SOURCE_COMPUTE,
 			EffectContributionType.REASON_INFERENCE_SERVED,
-			EffectContributionType.SUBJECT_COMPANY,
+			contribution_subject,
 			EffectContributionType.METRIC_CUMULATIVE_SERVED_INFERENCE_COMPUTE_UNIT_MONTHS,
 			EffectContributionType.Unit.COMPUTE_UNIT_MONTHS,
 			served_inference
@@ -78,7 +86,7 @@ func advance_month(compute_state: ComputeStateType) -> EffectBatchResultType:
 		contributions.append(EffectContributionType.new(
 			EffectContributionType.SOURCE_COMPUTE,
 			EffectContributionType.REASON_INFERENCE_UNMET,
-			EffectContributionType.SUBJECT_COMPANY,
+			contribution_subject,
 			EffectContributionType.METRIC_CUMULATIVE_UNMET_INFERENCE_COMPUTE_UNIT_MONTHS,
 			EffectContributionType.Unit.COMPUTE_UNIT_MONTHS,
 			unmet_inference
