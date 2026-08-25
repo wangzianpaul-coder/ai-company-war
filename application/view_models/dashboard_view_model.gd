@@ -2,6 +2,10 @@ class_name DashboardViewModel
 extends RefCounted
 
 
+const QuarterReportViewModelType = preload(
+	"res://application/view_models/quarter_report_view_model.gd"
+)
+
 var _title_text: String
 var _date_text: String
 var _cash_text: String
@@ -31,6 +35,11 @@ var _rival_utility_text: String
 var _rival_last_action_text: String
 var _rival_quarter_text: String
 var _rival_market_pressure_text: String
+var _prototype_status_text: String
+var _prototype_quarter_count: int
+var _prototype_complete: bool
+var _business_actions_enabled: bool
+var _quarter_report_view_models: Array[QuarterReportViewModelType] = []
 
 
 ## Stores primitive display values without exposing mutation methods.
@@ -63,7 +72,12 @@ func _init(
 	p_rival_utility_text: String = "",
 	p_rival_last_action_text: String = "",
 	p_rival_quarter_text: String = "",
-	p_rival_market_pressure_text: String = ""
+	p_rival_market_pressure_text: String = "",
+	p_prototype_status_text: String = "Prototype quarter: 0/6",
+	p_prototype_quarter_count: int = 0,
+	p_prototype_complete: bool = false,
+	p_business_actions_enabled: bool = true,
+	p_quarter_report_view_models: Array[QuarterReportViewModelType] = []
 ) -> void:
 	_title_text = p_title_text
 	_date_text = p_date_text
@@ -96,6 +110,12 @@ func _init(
 	_rival_last_action_text = p_rival_last_action_text
 	_rival_quarter_text = p_rival_quarter_text
 	_rival_market_pressure_text = p_rival_market_pressure_text
+	_prototype_status_text = p_prototype_status_text
+	_prototype_quarter_count = p_prototype_quarter_count
+	_prototype_complete = p_prototype_complete
+	_business_actions_enabled = p_business_actions_enabled
+	for report_view_model in p_quarter_report_view_models:
+		_quarter_report_view_models.append(report_view_model)
 
 
 func get_title_text() -> String:
@@ -212,3 +232,30 @@ func get_rival_quarter_text() -> String:
 
 func get_rival_market_pressure_text() -> String:
 	return _rival_market_pressure_text
+
+
+func get_prototype_status_text() -> String:
+	return _prototype_status_text
+
+
+func get_prototype_quarter_count() -> int:
+	return _prototype_quarter_count
+
+
+func is_prototype_complete() -> bool:
+	return _prototype_complete
+
+
+func are_business_actions_enabled() -> bool:
+	return _business_actions_enabled
+
+
+func get_quarter_report_view_models() -> Array[QuarterReportViewModelType]:
+	var copied_view_models: Array[QuarterReportViewModelType] = []
+	for report_view_model in _quarter_report_view_models:
+		copied_view_models.append(report_view_model)
+	return copied_view_models
+
+
+func get_quarter_report_count() -> int:
+	return _quarter_report_view_models.size()

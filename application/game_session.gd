@@ -25,9 +25,16 @@ const OpponentPersonalityType = preload("res://simulation/ai/opponent_personalit
 const OpponentDecisionType = preload("res://simulation/ai/opponent_decision.gd")
 const AiSystemType = preload("res://simulation/systems/ai_system.gd")
 const EffectContributionType = preload("res://simulation/events/effect_contribution.gd")
+const QuarterReportType = preload("res://simulation/reports/quarter_report.gd")
+const QuarterReportBuilderType = preload("res://simulation/reports/quarter_report_builder.gd")
 const DashboardViewModelType = preload("res://application/view_models/dashboard_view_model.gd")
+const QuarterReportViewModelType = preload(
+	"res://application/view_models/quarter_report_view_model.gd"
+)
 const MAX_SIGNED_INT: int = 9_223_372_036_854_775_807
 const MIN_SIGNED_INT: int = -9_223_372_036_854_775_807 - 1
+const PROTOTYPE_QUARTER_LIMIT: int = 6
+const MONTHS_PER_QUARTER: int = 3
 
 signal committed_result(view_model: DashboardViewModelType)
 
@@ -39,6 +46,9 @@ var _current_view_model: DashboardViewModelType
 var _personality: OpponentPersonalityType
 var _cached_planning_snapshot: OpponentPlanningSnapshotType
 var _cached_preview: OpponentDecisionType
+var _prototype_start_elapsed_months: int
+var _quarter_reports: Array[QuarterReportType] = []
+var _quarter_report_view_models: Array[QuarterReportViewModelType] = []
 
 
 ## Takes ownership of independent state and an immutable injected personality.
@@ -50,6 +60,7 @@ func _init(
 		_active_state = GameStateType.new()
 	else:
 		_active_state = p_initial_state.copy()
+	_prototype_start_elapsed_months = _active_state.get_clock().get_elapsed_months()
 	_personality = p_personality
 	_cached_planning_snapshot = _create_planning_snapshot(_active_state)
 	_cached_preview = _create_preview(
@@ -62,13 +73,24 @@ func _init(
 		_active_state,
 		no_contributions,
 		_cached_preview,
-		_last_rival_contributions
+		_last_rival_contributions,
+		_quarter_report_view_models,
+		0,
+		false
 	)
 
 
 ## Accepts only the three concrete commands and publishes only complete success.
 func submit_command(command: GameCommandType) -> CommandResultType:
 	if command == null:
+		return CommandResultType.new(false)
+	var committed_quarter_count: int = _derive_prototype_quarter_count(_active_state)
+	if (
+		committed_quarter_count < 0
+		or committed_quarter_count != _quarter_reports.size()
+		or committed_quarter_count != _quarter_report_view_models.size()
+		or committed_quarter_count >= PROTOTYPE_QUARTER_LIMIT
+	):
 		return CommandResultType.new(false)
 	if not _engine.is_opponent_boundary_valid(
 		_active_state,
@@ -84,10 +106,14 @@ func submit_command(command: GameCommandType) -> CommandResultType:
 
 	var tick_result: TickResultType
 	var advances_quarter: bool = false
+	var before_quarter_state: GameStateType
 	if command.get_script() == StartProjectCommandType:
 		tick_result = _engine.start_project(_active_state)
 	elif command.get_script() == AdvanceQuarterCommandType:
 		advances_quarter = true
+		before_quarter_state = _active_state.copy()
+		if before_quarter_state == null:
+			return CommandResultType.new(false)
 		tick_result = _engine.advance_quarter(
 			_active_state,
 			_cached_planning_snapshot,
@@ -117,26 +143,79 @@ func submit_command(command: GameCommandType) -> CommandResultType:
 	var candidate_rival_contributions: Array[EffectContributionType] = (
 		_copy_contributions(_last_rival_contributions)
 	)
+	var candidate_quarter_count: int = committed_quarter_count
+	var candidate_reports: Array[QuarterReportType] = _copy_reports(_quarter_reports)
+	var candidate_report_view_models: Array[QuarterReportViewModelType] = (
+		_copy_report_view_models(_quarter_report_view_models)
+	)
+	var candidate_prototype_complete: bool = false
 	if advances_quarter:
-		candidate_planning_snapshot = _create_planning_snapshot(candidate_state)
-		candidate_preview = _create_preview(
-			candidate_state,
-			candidate_planning_snapshot,
-			_personality
-		)
+		candidate_quarter_count = _derive_prototype_quarter_count(candidate_state)
 		if (
-			candidate_state.get_opponent().get_opponent_id() != &""
-			and candidate_preview == null
+			candidate_quarter_count != committed_quarter_count + 1
+			or candidate_quarter_count > PROTOTYPE_QUARTER_LIMIT
+			or candidate_state.get_clock().get_elapsed_months()
+				< before_quarter_state.get_clock().get_elapsed_months()
+			or candidate_state.get_clock().get_elapsed_months()
+				- before_quarter_state.get_clock().get_elapsed_months()
+				!= MONTHS_PER_QUARTER
 		):
 			return CommandResultType.new(false)
+		candidate_prototype_complete = (
+			candidate_quarter_count == PROTOTYPE_QUARTER_LIMIT
+		)
+		candidate_planning_snapshot = _create_planning_snapshot(candidate_state)
+		if candidate_prototype_complete:
+			candidate_preview = null
+		else:
+			candidate_preview = _create_preview(
+				candidate_state,
+				candidate_planning_snapshot,
+				_personality
+			)
+			if (
+				candidate_state.get_opponent().get_opponent_id() != &""
+				and candidate_preview == null
+			):
+				return CommandResultType.new(false)
 		candidate_rival_contributions = _extract_rival_contributions(
 			candidate_contributions
 		)
+		var candidate_report: QuarterReportType = QuarterReportBuilderType.new().build(
+			before_quarter_state,
+			tick_result,
+			candidate_preview,
+			candidate_quarter_count,
+			candidate_prototype_complete
+		)
+		if candidate_report == null or not candidate_report.is_valid():
+			return CommandResultType.new(false)
+		var opponent_display_name: String = (
+			"" if _personality == null else _personality.get_display_name()
+		)
+		var candidate_report_view_model: QuarterReportViewModelType = (
+			QuarterReportViewModelType.new(candidate_report, opponent_display_name)
+		)
+		if (
+			candidate_report_view_model == null
+			or not candidate_report_view_model.is_valid()
+		):
+			return CommandResultType.new(false)
+		candidate_reports.append(candidate_report)
+		candidate_report_view_models.append(candidate_report_view_model)
+		if (
+			candidate_reports.size() != candidate_quarter_count
+			or candidate_report_view_models.size() != candidate_quarter_count
+		):
+			return CommandResultType.new(false)
 	var candidate_view_model: DashboardViewModelType = _build_view_model(
 		candidate_state,
 		candidate_contributions,
 		candidate_preview,
-		candidate_rival_contributions
+		candidate_rival_contributions,
+		candidate_report_view_models,
+		candidate_quarter_count,
+		candidate_prototype_complete
 	)
 	if candidate_view_model == null:
 		return CommandResultType.new(false)
@@ -149,6 +228,8 @@ func submit_command(command: GameCommandType) -> CommandResultType:
 		_cached_planning_snapshot = candidate_planning_snapshot
 		_cached_preview = candidate_preview
 		_last_rival_contributions = candidate_rival_contributions
+		_quarter_reports = candidate_reports
+		_quarter_report_view_models = candidate_report_view_models
 	_current_view_model = candidate_view_model
 	committed_result.emit(_current_view_model)
 	return CommandResultType.new(true)
@@ -174,6 +255,25 @@ func get_last_rival_contributions() -> Array[EffectContributionType]:
 	return _copy_contributions(_last_rival_contributions)
 
 
+## Returns the committed Prototype count derived from elapsed months.
+func get_prototype_quarter_count() -> int:
+	return _derive_prototype_quarter_count(_active_state)
+
+
+func is_prototype_complete() -> bool:
+	return get_prototype_quarter_count() == PROTOTYPE_QUARTER_LIMIT
+
+
+## Returns fully independent immutable report copies in committed quarter order.
+func get_quarter_reports() -> Array[QuarterReportType]:
+	return _copy_reports(_quarter_reports)
+
+
+## Exposes only whether a non-consuming next decision is cached.
+func has_cached_opponent_preview() -> bool:
+	return _cached_preview != null
+
+
 ## Returns the current immutable-by-interface display values.
 func get_current_view_model() -> DashboardViewModelType:
 	return _current_view_model
@@ -183,8 +283,19 @@ func _build_view_model(
 	state: GameStateType,
 	contributions: Array[EffectContributionType],
 	preview: OpponentDecisionType,
-	rival_contributions: Array[EffectContributionType]
+	rival_contributions: Array[EffectContributionType],
+	report_view_models: Array[QuarterReportViewModelType],
+	prototype_quarter_count: int,
+	prototype_complete: bool
 ) -> DashboardViewModelType:
+	if (
+		prototype_quarter_count < 0
+		or prototype_quarter_count > PROTOTYPE_QUARTER_LIMIT
+		or prototype_complete
+			!= (prototype_quarter_count == PROTOTYPE_QUARTER_LIMIT)
+		or report_view_models.size() != prototype_quarter_count
+	):
+		return null
 	var revenue_cash_cents: int = 0
 	var operating_cost_cash_cents: int = 0
 	var project_cost_cash_cents: int = 0
@@ -441,54 +552,61 @@ func _build_view_model(
 	var rival_last_action_text: String = ""
 	var rival_quarter_text: String = ""
 	var rival_market_pressure_text: String = ""
+	if prototype_complete:
+		if preview != null:
+			return null
+		rival_signal_text = "Prototype complete — no next signal"
+		rival_reason_text = "Why: Prototype complete"
+		rival_utility_text = "Utility: —"
 	var opponent: OpponentStateType = state.get_opponent()
 	if (
 		opponent != null
 		and opponent.get_opponent_id() != &""
 		and _personality != null
-		and preview != null
-		and preview.is_successful()
 	):
-		var preview_command: SetComputeAllocationCommandType = preview.get_command()
-		if (
-			preview_command == null
-			or preview_command.get_script() != SetComputeAllocationCommandType
-		):
-			return null
 		var opponent_compute: ComputeStateType = opponent.get_compute()
 		var allocatable_units: int = (
 			opponent_compute.get_allocatable_capacity_units_per_month()
 		)
-		var preview_training_units: int = (
-			preview_command.get_training_units_per_month()
-		)
-		if preview_training_units < 0 or preview_training_units > allocatable_units:
-			return null
-		var preview_inference_units: int = allocatable_units - preview_training_units
-		var reason_display: String = _reason_display_text(preview.get_reason_key())
-		if reason_display.is_empty():
-			return null
 		var has_committed_rival_quarter: bool = not rival_contributions.is_empty()
-		if has_committed_rival_quarter:
-			rival_signal_text = (
-				"Next signal: %s training / %s inference — %s" % [
+		if not prototype_complete:
+			if preview == null or not preview.is_successful():
+				return null
+			var preview_command: SetComputeAllocationCommandType = preview.get_command()
+			if (
+				preview_command == null
+				or preview_command.get_script() != SetComputeAllocationCommandType
+			):
+				return null
+			var preview_training_units: int = (
+				preview_command.get_training_units_per_month()
+			)
+			if preview_training_units < 0 or preview_training_units > allocatable_units:
+				return null
+			var preview_inference_units: int = allocatable_units - preview_training_units
+			var reason_display: String = _reason_display_text(preview.get_reason_key())
+			if reason_display.is_empty():
+				return null
+			if has_committed_rival_quarter:
+				rival_signal_text = (
+					"Next signal: %s training / %s inference — %s" % [
+						_format_integer(preview_training_units),
+						_format_integer(preview_inference_units),
+						reason_display,
+					]
+				)
+			else:
+				rival_signal_text = "%s signal: %s training / %s inference" % [
+					_personality.get_display_name(),
 					_format_integer(preview_training_units),
 					_format_integer(preview_inference_units),
-					reason_display,
 				]
-			)
-		else:
-			rival_signal_text = "%s signal: %s training / %s inference" % [
-				_personality.get_display_name(),
-				_format_integer(preview_training_units),
-				_format_integer(preview_inference_units),
+			rival_reason_text = "Why: %s" % reason_display
+			rival_utility_text = "Utility: %s = %s + %s seeded noise" % [
+				_format_integer(preview.get_total_utility_points()),
+				_format_integer(preview.get_base_utility_points()),
+				_format_integer(preview.get_noise_points()),
 			]
-		rival_reason_text = "Why: %s" % reason_display
-		rival_utility_text = "Utility: %s = %s + %s seeded noise" % [
-			_format_integer(preview.get_total_utility_points()),
-			_format_integer(preview.get_base_utility_points()),
-			_format_integer(preview.get_noise_points()),
-		]
 		rival_last_action_text = "Last action: —"
 		rival_quarter_text = "Quarter: —"
 		rival_market_pressure_text = "Market pressure: —"
@@ -600,8 +718,12 @@ func _build_view_model(
 			project.get_progress_months(),
 			project.get_required_months(),
 		],
-		"START PROJECT" if start_project_available else "NEXT QUARTER",
-		start_project_available,
+		(
+			"PROTOTYPE COMPLETE"
+			if prototype_complete
+			else ("START PROJECT" if start_project_available else "NEXT QUARTER")
+		),
+		start_project_available and not prototype_complete,
 		"Cash: %s → %s = %s cents" % [
 			_format_integer(cash_before_cents),
 			_format_integer(cash_after_cents),
@@ -648,7 +770,16 @@ func _build_view_model(
 		rival_utility_text,
 		rival_last_action_text,
 		rival_quarter_text,
-		rival_market_pressure_text
+		rival_market_pressure_text,
+		(
+			"Prototype complete: 6/6"
+			if prototype_complete
+			else "Prototype quarter: %d/6" % prototype_quarter_count
+		),
+		prototype_quarter_count,
+		prototype_complete,
+		not prototype_complete,
+		report_view_models
 	)
 
 
@@ -708,6 +839,44 @@ func _copy_contributions(
 	for contribution in contributions:
 		copied_contributions.append(contribution)
 	return copied_contributions
+
+
+func _copy_reports(reports: Array[QuarterReportType]) -> Array[QuarterReportType]:
+	var copied_reports: Array[QuarterReportType] = []
+	for report in reports:
+		if report == null:
+			return []
+		var copied_report: QuarterReportType = report.copy()
+		if copied_report == null or not copied_report.is_valid():
+			return []
+		copied_reports.append(copied_report)
+	return copied_reports
+
+
+func _copy_report_view_models(
+	view_models: Array[QuarterReportViewModelType]
+) -> Array[QuarterReportViewModelType]:
+	var copied_view_models: Array[QuarterReportViewModelType] = []
+	for view_model in view_models:
+		if view_model == null or not view_model.is_valid():
+			return []
+		copied_view_models.append(view_model)
+	return copied_view_models
+
+
+func _derive_prototype_quarter_count(state: GameStateType) -> int:
+	if state == null or state.get_clock() == null:
+		return -1
+	var elapsed_months: int = state.get_clock().get_elapsed_months()
+	if elapsed_months < _prototype_start_elapsed_months:
+		return -1
+	var prototype_elapsed_months: int = elapsed_months - _prototype_start_elapsed_months
+	if prototype_elapsed_months % MONTHS_PER_QUARTER != 0:
+		return -1
+	var quarter_count: int = prototype_elapsed_months / MONTHS_PER_QUARTER
+	if quarter_count < 0 or quarter_count > PROTOTYPE_QUARTER_LIMIT:
+		return -1
+	return quarter_count
 
 
 func _reason_display_text(reason_key: StringName) -> String:

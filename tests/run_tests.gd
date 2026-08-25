@@ -32,9 +32,22 @@ const MARKET_SYSTEM_SCRIPT = preload("res://simulation/systems/market_system.gd"
 const AI_SYSTEM_SCRIPT = preload("res://simulation/systems/ai_system.gd")
 const EFFECT_CONTRIBUTION_SCRIPT = preload("res://simulation/events/effect_contribution.gd")
 const EFFECT_BATCH_RESULT_SCRIPT = preload("res://simulation/events/effect_batch_result.gd")
+const QUARTER_REPORT_SCRIPT = preload("res://simulation/reports/quarter_report.gd")
+const QUARTER_REPORT_BUILDER_SCRIPT = preload(
+	"res://simulation/reports/quarter_report_builder.gd"
+)
 const GAME_SESSION_SCRIPT = preload("res://application/game_session.gd")
 const DASHBOARD_VIEW_MODEL_SCRIPT = preload("res://application/view_models/dashboard_view_model.gd")
+const QUARTER_REPORT_VIEW_MODEL_SCRIPT = preload(
+	"res://application/view_models/quarter_report_view_model.gd"
+)
 const DASHBOARD_SCRIPT = preload("res://ui/screens/dashboard.gd")
+const SIX_QUARTER_BATCH_RESULT_SCRIPT = preload(
+	"res://debug/six_quarter_batch_result.gd"
+)
+const SIX_QUARTER_BATCH_SIMULATOR_SCRIPT = preload(
+	"res://debug/six_quarter_batch_simulator.gd"
+)
 const TEST_SIMULATION_CLOCK_SCRIPT = preload("res://tests/unit/test_simulation_clock.gd")
 const TEST_FINANCE_PROJECT_EFFECTS_SCRIPT = preload("res://tests/unit/test_finance_project_effects.gd")
 const TEST_QUARTER_SESSION_DASHBOARD_SCRIPT = preload(
@@ -54,6 +67,13 @@ const TEST_EXPLAINABLE_OPPONENT_SCRIPT = preload(
 const TEST_OPPONENT_SESSION_DASHBOARD_SCRIPT = preload(
 	"res://tests/integration/test_opponent_session_dashboard.gd"
 )
+const TEST_QUARTER_REPORT_SCRIPT = preload("res://tests/unit/test_quarter_report.gd")
+const TEST_SIX_QUARTER_PROTOTYPE_SCRIPT = preload(
+	"res://tests/integration/test_six_quarter_prototype.gd"
+)
+const TEST_SIX_QUARTER_BATCH_SCRIPT = preload(
+	"res://tests/batch/test_six_quarter_batch.gd"
+)
 
 var _pass_count: int = 0
 var _fail_count: int = 0
@@ -64,9 +84,16 @@ func _initialize() -> void:
 
 
 func _run_tests() -> void:
-	if OS.get_cmdline_user_args().has("--self-test-failure"):
+	var user_args: PackedStringArray = OS.get_cmdline_user_args()
+	if user_args.has("--self-test-failure"):
 		_check(false, "Runner failure self-test")
 		_finish()
+		return
+	if user_args.has("--tp023-batch-only"):
+		var batch_success: bool = TEST_SIX_QUARTER_BATCH_SCRIPT.run_batch_only(
+			user_args.has("--tp023-inject-batch-failure")
+		)
+		quit(0 if batch_success else 1)
 		return
 
 	_check(GAME_COMMAND_SCRIPT != null, "GameCommand script is explicitly preloaded")
@@ -104,9 +131,26 @@ func _run_tests() -> void:
 	_check(AI_SYSTEM_SCRIPT != null, "AiSystem script is explicitly preloaded")
 	_check(EFFECT_CONTRIBUTION_SCRIPT != null, "EffectContribution script is explicitly preloaded")
 	_check(EFFECT_BATCH_RESULT_SCRIPT != null, "EffectBatchResult script is explicitly preloaded")
+	_check(QUARTER_REPORT_SCRIPT != null, "QuarterReport script is explicitly preloaded")
+	_check(
+		QUARTER_REPORT_BUILDER_SCRIPT != null,
+		"QuarterReportBuilder script is explicitly preloaded"
+	)
 	_check(GAME_SESSION_SCRIPT != null, "GameSession script is explicitly preloaded")
 	_check(DASHBOARD_VIEW_MODEL_SCRIPT != null, "DashboardViewModel script is explicitly preloaded")
+	_check(
+		QUARTER_REPORT_VIEW_MODEL_SCRIPT != null,
+		"QuarterReportViewModel script is explicitly preloaded"
+	)
 	_check(DASHBOARD_SCRIPT != null, "Dashboard script is explicitly preloaded")
+	_check(
+		SIX_QUARTER_BATCH_RESULT_SCRIPT != null,
+		"SixQuarterBatchResult script is explicitly preloaded"
+	)
+	_check(
+		SIX_QUARTER_BATCH_SIMULATOR_SCRIPT != null,
+		"SixQuarterBatchSimulator script is explicitly preloaded"
+	)
 	_check(TEST_SIMULATION_CLOCK_SCRIPT != null, "Simulation clock unit suite is explicitly preloaded")
 	TEST_SIMULATION_CLOCK_SCRIPT.run(Callable(self, "_check"))
 	_check(
@@ -149,6 +193,21 @@ func _run_tests() -> void:
 		"Opponent session dashboard integration suite is explicitly preloaded"
 	)
 	TEST_OPPONENT_SESSION_DASHBOARD_SCRIPT.run(Callable(self, "_check"))
+	_check(
+		TEST_QUARTER_REPORT_SCRIPT != null,
+		"Quarter report unit suite is explicitly preloaded"
+	)
+	TEST_QUARTER_REPORT_SCRIPT.run(Callable(self, "_check"))
+	_check(
+		TEST_SIX_QUARTER_PROTOTYPE_SCRIPT != null,
+		"Six-quarter Prototype integration suite is explicitly preloaded"
+	)
+	TEST_SIX_QUARTER_PROTOTYPE_SCRIPT.run(Callable(self, "_check"))
+	_check(
+		TEST_SIX_QUARTER_BATCH_SCRIPT != null,
+		"Six-quarter batch suite is explicitly preloaded"
+	)
+	TEST_SIX_QUARTER_BATCH_SCRIPT.run(Callable(self, "_check"))
 
 	_check(MAIN_SCENE != null, "Main scene is explicitly preloaded")
 
@@ -395,6 +454,30 @@ func _run_tests() -> void:
 	var inference_unmet_label: Label = main_instance.get_node_or_null(
 		^"DashboardMargin/Dashboard/Explanation/ComputeExplanationGrid/InferenceUnmetLabel"
 	) as Label
+	var prototype_heading: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/PrototypeHeading"
+	) as Label
+	var prototype_status_label: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/PrototypeReportBar/PrototypeStatusLabel"
+	) as Label
+	var selected_report_label: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/PrototypeReportBar/SelectedReportLabel"
+	) as Label
+	var previous_report_button: Button = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/PrototypeReportBar/PreviousReportButton"
+	) as Button
+	var next_report_button: Button = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/PrototypeReportBar/NextReportButton"
+	) as Button
+	var report_details_button: Button = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/PrototypeReportBar/ReportDetailsButton"
+	) as Button
+	var report_summary_label: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/ReportSummaryLabel"
+	) as Label
+	var report_detail_scroll: ScrollContainer = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/ReportDetailScroll"
+	) as ScrollContainer
 	var body_spacer: Control = main_instance.get_node_or_null(
 		^"DashboardMargin/Dashboard/BodySpacer"
 	) as Control
@@ -471,6 +554,24 @@ func _run_tests() -> void:
 		and rival_quarter_label.text == "Quarter: —"
 		and rival_market_pressure_label != null
 		and rival_market_pressure_label.text == "Market pressure: —"
+	)
+	var initial_report_exact: bool = (
+		prototype_heading != null
+		and prototype_heading.text == "PROTOTYPE / QUARTER REPORT"
+		and prototype_status_label != null
+		and prototype_status_label.text == "Prototype quarter: 0/6"
+		and selected_report_label != null
+		and selected_report_label.text == "Quarter Report: —"
+		and previous_report_button != null
+		and previous_report_button.disabled
+		and next_report_button != null
+		and next_report_button.disabled
+		and report_details_button != null
+		and report_details_button.disabled
+		and report_summary_label != null
+		and report_summary_label.text == "No committed quarter report."
+		and report_detail_scroll != null
+		and not report_detail_scroll.visible
 	)
 
 	if primary_button != null:
@@ -610,6 +711,16 @@ func _run_tests() -> void:
 			and final_compute_exact
 			and final_rival_exact
 	)
+	var report_navigation_exact: bool = await (
+		TEST_SIX_QUARTER_PROTOTYPE_SCRIPT.validate_dashboard_report_history_scene(
+			main_instance as Control,
+			root
+		)
+	)
+	_check(
+		initial_report_exact and report_navigation_exact,
+		"TP-023 dashboard navigates six primitive reports without simulation access"
+	)
 
 	var visible_controls: Array[Control] = [
 		title_label,
@@ -650,6 +761,14 @@ func _run_tests() -> void:
 		training_work_label,
 		inference_served_label,
 		inference_unmet_label,
+		prototype_heading,
+		prototype_status_label,
+		selected_report_label,
+		previous_report_button,
+		next_report_button,
+		report_details_button,
+		report_summary_label,
+		report_detail_scroll,
 		body_spacer,
 	]
 	root.size = Vector2i(1280, 720)
@@ -690,6 +809,10 @@ func _run_tests() -> void:
 		Callable(self, "_check"),
 		fits_1280 and fits_1920
 	)
+	_check(
+		fits_1280 and fits_1920,
+		"TP-023 dashboard report fits 1280x720 and 1920x1080"
+	)
 
 	main_instance.queue_free()
 	await process_frame
@@ -719,6 +842,15 @@ func _dashboard_fits(
 			main_rect,
 			margin_rect,
 		])
+		for child in dashboard.get_children():
+			if child is Control:
+				var child_control: Control = child as Control
+				print("[LAYOUT] Child %s visible=%s rect=%s minimum=%s" % [
+					child_control.name,
+					child_control.visible,
+					child_control.get_global_rect(),
+					child_control.get_combined_minimum_size(),
+				])
 		return false
 	if main_rect.size != Vector2(resolution.x, resolution.y):
 		print("[LAYOUT] Main size failed at %dx%d: %s" % [

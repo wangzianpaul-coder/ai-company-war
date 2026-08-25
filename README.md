@@ -94,6 +94,42 @@ if ($LASTEXITCODE -ne 1) {
 }
 ```
 
+## TP-023 六季度 batch-only 验证
+
+开发者批量验证必须使用以下精确入口；它只运行固定的 100 局 batch contract，不运行普通 150 项 suite：
+
+```powershell
+$aiWarBatchOutput = @(& $aiWarGodotConsole --headless --path $aiWarProject --script res://tests/run_tests.gd -- --tp023-batch-only 2>&1)
+$aiWarBatchExitCode = $LASTEXITCODE
+$aiWarBatchOutput | ForEach-Object { Write-Output $_ }
+$aiWarBatchText = $aiWarBatchOutput -join "`n"
+
+if (
+    $aiWarBatchExitCode -ne 0 -or
+    $aiWarBatchText -notmatch '\[BATCH\] policies training_first=50 inference_first=50' -or
+    $aiWarBatchText -notmatch '\[BATCH\] counts games=100 quarters=600 reports=600 failed=0' -or
+    $aiWarBatchText -notmatch '\[BATCH\] commands start=100 set=600 advance=600' -or
+    $aiWarBatchText -notmatch '\[BATCH\] streams events_unchanged_games=100 market_unchanged_games=100' -or
+    $aiWarBatchText -notmatch '\[BATCH\] aggregate aggregate\|100\|600\|600\|0\|50\|50' -or
+    $aiWarBatchText -notmatch '\[BATCH\] digest [0-9a-f]{64}' -or
+    $aiWarBatchText -notmatch '\[BATCH\] errors none' -or
+    $aiWarBatchText -match '\[SUMMARY\]'
+) {
+    throw "TP-023 batch-only validation failed with exit code $aiWarBatchExitCode"
+}
+```
+
+成功输出还包含以 `acw-tp023-batch-v1` 开始的 702 条 canonical lines；完整文本使用 LF 和单一末尾 LF。同一固定 Godot/rule 版本下重复运行时，canonical lines、`aggregate|100|600|600|0|50|50` 和 64 位小写 SHA-256 digest 必须逐字一致。digest 仅是重现性证据，不替代状态、报告和 invariant 断言。
+
+故障注入验证必须返回退出码 `1`，且不能被计为成功：
+
+```powershell
+& $aiWarGodotConsole --headless --path $aiWarProject --script res://tests/run_tests.gd -- --tp023-batch-only --tp023-inject-batch-failure
+if ($LASTEXITCODE -ne 1) {
+    throw "Injected TP-023 batch failure should exit 1, actual: $LASTEXITCODE"
+}
+```
+
 ## 场景与主项目 smoke
 
 ```powershell

@@ -1,7 +1,10 @@
-[gd_scene load_steps=3 format=3 uid="uid://b4cpoeqrcctw1"]
+[gd_scene load_steps=4 format=3 uid="uid://b4cpoeqrcctw1"]
 
 [ext_resource type="Script" uid="uid://btxwngqr4t71f" path="res://main.gd" id="1_ig7tw"]
 [ext_resource type="Script" path="res://ui/screens/dashboard.gd" id="2_dashboard"]
+
+[sub_resource type="Theme" id="Theme_compact_dashboard"]
+default_font_size = 13
 
 [node name="Main" type="Control" unique_id=189007909]
 layout_mode = 3
@@ -30,12 +33,13 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/margin_left = 64
-theme_override_constants/margin_top = 8
+theme_override_constants/margin_top = 4
 theme_override_constants/margin_right = 64
-theme_override_constants/margin_bottom = 8
+theme_override_constants/margin_bottom = 4
 
 [node name="Dashboard" type="VBoxContainer" parent="DashboardMargin"]
 layout_mode = 2
+theme = SubResource("Theme_compact_dashboard")
 theme_override_constants/separation = 1
 script = ExtResource("2_dashboard")
 
@@ -44,7 +48,7 @@ layout_mode = 2
 
 [node name="TitleLabel" type="Label" parent="DashboardMargin/Dashboard/Header"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 28
+theme_override_font_sizes/font_size = 24
 text = "AI COMPANY WAR"
 
 [node name="HeaderSpacer" type="Control" parent="DashboardMargin/Dashboard/Header"]
@@ -53,7 +57,7 @@ size_flags_horizontal = 3
 
 [node name="DateLabel" type="Label" parent="DashboardMargin/Dashboard/Header"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 18
 text = "2026 Q1"
 vertical_alignment = 1
 
@@ -62,7 +66,7 @@ layout_mode = 2
 
 [node name="CompanyHeading" type="Label" parent="DashboardMargin/Dashboard"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 14
 text = "COMPANY"
 
 [node name="FinanceGrid" type="GridContainer" parent="DashboardMargin/Dashboard"]
@@ -86,7 +90,7 @@ text = "Monthly operating cost: 80,000 cents"
 
 [node name="ComputeHeading" type="Label" parent="DashboardMargin/Dashboard"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 14
 text = "COMPUTE"
 
 [node name="ComputePlanLabel" type="Label" parent="DashboardMargin/Dashboard"]
@@ -107,7 +111,7 @@ text = "Training units/month"
 vertical_alignment = 1
 
 [node name="TrainingUnitsSpinBox" type="SpinBox" parent="DashboardMargin/Dashboard/ComputePlanControls"]
-custom_minimum_size = Vector2(120, 36)
+custom_minimum_size = Vector2(120, 32)
 layout_mode = 2
 max_value = 90.0
 step = 1.0
@@ -121,13 +125,13 @@ layout_mode = 2
 size_flags_horizontal = 3
 
 [node name="ApplyComputePlanButton" type="Button" parent="DashboardMargin/Dashboard/ComputePlanControls"]
-custom_minimum_size = Vector2(220, 36)
+custom_minimum_size = Vector2(220, 32)
 layout_mode = 2
 text = "APPLY COMPUTE PLAN"
 
 [node name="MarketsHeading" type="Label" parent="DashboardMargin/Dashboard"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 14
 text = "MARKETS"
 
 [node name="MarketsGrid" type="GridContainer" parent="DashboardMargin/Dashboard"]
@@ -149,7 +153,7 @@ autowrap_mode = 2
 
 [node name="RivalHeading" type="Label" parent="DashboardMargin/Dashboard"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 14
 text = "RIVAL"
 
 [node name="RivalGrid" type="GridContainer" parent="DashboardMargin/Dashboard"]
@@ -196,7 +200,7 @@ autowrap_mode = 2
 
 [node name="ProjectHeading" type="Label" parent="DashboardMargin/Dashboard"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 14
 text = "PROJECT"
 
 [node name="ProjectLabel" type="Label" parent="DashboardMargin/Dashboard"]
@@ -204,61 +208,143 @@ layout_mode = 2
 text = "Project: project_alpha — NOT STARTED 0/3"
 
 [node name="PrimaryButton" type="Button" parent="DashboardMargin/Dashboard"]
-custom_minimum_size = Vector2(0, 44)
+custom_minimum_size = Vector2(0, 36)
 layout_mode = 2
 text = "START PROJECT"
 
 [node name="ExplanationHeading" type="Label" parent="DashboardMargin/Dashboard"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 14
 text = "QUARTER EXPLANATION"
 
-[node name="Explanation" type="VBoxContainer" parent="DashboardMargin/Dashboard"]
+[node name="Explanation" type="GridContainer" parent="DashboardMargin/Dashboard"]
 layout_mode = 2
-theme_override_constants/separation = 4
+theme_override_constants/h_separation = 24
+theme_override_constants/v_separation = 2
+columns = 2
 
 [node name="CashReconciliationLabel" type="Label" parent="DashboardMargin/Dashboard/Explanation"]
 layout_mode = 2
+size_flags_horizontal = 3
 text = "Cash: 1,000,000 → 1,000,000 = 0 cents"
+autowrap_mode = 2
 
 [node name="RevenueContributionLabel" type="Label" parent="DashboardMargin/Dashboard/Explanation"]
 layout_mode = 2
+size_flags_horizontal = 3
 text = "Revenue cash contributions: 0 cents"
+autowrap_mode = 2
 
 [node name="OperatingCostContributionLabel" type="Label" parent="DashboardMargin/Dashboard/Explanation"]
 layout_mode = 2
+size_flags_horizontal = 3
 text = "Operating-cost contributions: 0 cents"
+autowrap_mode = 2
 
 [node name="ProjectCostContributionLabel" type="Label" parent="DashboardMargin/Dashboard/Explanation"]
 layout_mode = 2
+size_flags_horizontal = 3
 text = "Project-cost contributions: 0 cents"
+autowrap_mode = 2
 
 [node name="ProgressContributionLabel" type="Label" parent="DashboardMargin/Dashboard/Explanation"]
 layout_mode = 2
+size_flags_horizontal = 3
 text = "Project progress: 0 months"
+autowrap_mode = 2
 
 [node name="CompletionRevenueContributionLabel" type="Label" parent="DashboardMargin/Dashboard/Explanation"]
 layout_mode = 2
+size_flags_horizontal = 3
 text = "Completion monthly revenue: 0 cents"
+autowrap_mode = 2
 
 [node name="ComputeExplanationGrid" type="GridContainer" parent="DashboardMargin/Dashboard/Explanation"]
 layout_mode = 2
+size_flags_horizontal = 3
 columns = 3
 
 [node name="TrainingWorkLabel" type="Label" parent="DashboardMargin/Dashboard/Explanation/ComputeExplanationGrid"]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Training work: 0 compute-unit-months"
+autowrap_mode = 2
 
 [node name="InferenceServedLabel" type="Label" parent="DashboardMargin/Dashboard/Explanation/ComputeExplanationGrid"]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Inference served: 0/0 compute-unit-months"
+autowrap_mode = 2
 
 [node name="InferenceUnmetLabel" type="Label" parent="DashboardMargin/Dashboard/Explanation/ComputeExplanationGrid"]
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Inference unmet: 0 compute-unit-months"
+autowrap_mode = 2
+
+[node name="ExplanationGridSpacer" type="Control" parent="DashboardMargin/Dashboard/Explanation"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="PrototypeHeading" type="Label" parent="DashboardMargin/Dashboard"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "PROTOTYPE / QUARTER REPORT"
+
+[node name="PrototypeReportBar" type="HBoxContainer" parent="DashboardMargin/Dashboard"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="PrototypeStatusLabel" type="Label" parent="DashboardMargin/Dashboard/PrototypeReportBar"]
+layout_mode = 2
+text = "Prototype quarter: 0/6"
+vertical_alignment = 1
+
+[node name="PrototypeReportSpacer" type="Control" parent="DashboardMargin/Dashboard/PrototypeReportBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SelectedReportLabel" type="Label" parent="DashboardMargin/Dashboard/PrototypeReportBar"]
+layout_mode = 2
+text = "Quarter Report: —"
+vertical_alignment = 1
+
+[node name="PreviousReportButton" type="Button" parent="DashboardMargin/Dashboard/PrototypeReportBar"]
+custom_minimum_size = Vector2(92, 28)
+layout_mode = 2
+disabled = true
+text = "PREVIOUS"
+
+[node name="NextReportButton" type="Button" parent="DashboardMargin/Dashboard/PrototypeReportBar"]
+custom_minimum_size = Vector2(72, 28)
+layout_mode = 2
+disabled = true
+text = "NEXT"
+
+[node name="ReportDetailsButton" type="Button" parent="DashboardMargin/Dashboard/PrototypeReportBar"]
+custom_minimum_size = Vector2(116, 28)
+layout_mode = 2
+disabled = true
+text = "DETAILS"
+
+[node name="ReportSummaryLabel" type="Label" parent="DashboardMargin/Dashboard"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "No committed quarter report."
+autowrap_mode = 2
+
+[node name="ReportDetailScroll" type="ScrollContainer" parent="DashboardMargin/Dashboard"]
+visible = false
+custom_minimum_size = Vector2(0, 72)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ReportDetailLabel" type="Label" parent="DashboardMargin/Dashboard/ReportDetailScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = ""
+autowrap_mode = 2
 
 [node name="BodySpacer" type="Control" parent="DashboardMargin/Dashboard"]
 layout_mode = 2
