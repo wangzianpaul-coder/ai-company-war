@@ -25,6 +25,9 @@ const SetComputeAllocationCommandType = preload(
 @onready var apply_compute_plan_button: Button = (
 	$ComputePlanControls/ApplyComputePlanButton
 )
+@onready var advance_quarter_button: Button = (
+	$ComputePlanControls/AdvanceQuarterButton
+)
 @onready var consumer_market_label: Label = $MarketsGrid/ConsumerMarketLabel
 @onready var developer_api_market_label: Label = $MarketsGrid/DeveloperApiMarketLabel
 @onready var rival_signal_label: Label = $RivalGrid/RivalSignalLabel
@@ -76,6 +79,7 @@ var _report_drawer_expanded: bool = false
 func _ready() -> void:
 	primary_button.pressed.connect(_on_primary_button_pressed)
 	apply_compute_plan_button.pressed.connect(_on_apply_compute_plan_button_pressed)
+	advance_quarter_button.pressed.connect(_on_advance_quarter_button_pressed)
 	previous_report_button.pressed.connect(_on_previous_report_button_pressed)
 	next_report_button.pressed.connect(_on_next_report_button_pressed)
 	report_details_button.pressed.connect(_on_report_details_button_pressed)
@@ -93,12 +97,12 @@ func initialize(p_session: GameSessionType) -> void:
 func _on_primary_button_pressed() -> void:
 	if _session == null or _view_model == null:
 		return
-	if not _view_model.are_business_actions_enabled():
+	if (
+		not _view_model.are_business_actions_enabled()
+		or not _view_model.is_start_project_available()
+	):
 		return
-	if _view_model.is_start_project_available():
-		_session.submit_command(StartProjectCommandType.new())
-	else:
-		_session.submit_command(AdvanceQuarterCommandType.new())
+	_session.submit_command(StartProjectCommandType.new())
 
 
 func _on_apply_compute_plan_button_pressed() -> void:
@@ -109,6 +113,17 @@ func _on_apply_compute_plan_button_pressed() -> void:
 	_session.submit_command(SetComputeAllocationCommandType.new(
 		int(training_units_spin_box.value)
 	))
+
+
+func _on_advance_quarter_button_pressed() -> void:
+	if _session == null or _view_model == null:
+		return
+	if (
+		not _view_model.are_business_actions_enabled()
+		or _view_model.is_start_project_available()
+	):
+		return
+	_session.submit_command(AdvanceQuarterCommandType.new())
 
 
 func _on_previous_report_button_pressed() -> void:
@@ -176,10 +191,20 @@ func _refresh(view_model: DashboardViewModelType) -> void:
 	training_units_spin_box.value = float(
 		view_model.get_training_allocation_units_per_month()
 	)
-	primary_button.text = view_model.get_action_text()
 	var business_actions_enabled: bool = view_model.are_business_actions_enabled()
-	primary_button.disabled = not business_actions_enabled
+	var start_project_available: bool = (
+		business_actions_enabled
+		and view_model.is_start_project_available()
+	)
+	primary_button.text = "START PROJECT"
+	apply_compute_plan_button.text = "SET COMPUTE ALLOCATION"
+	advance_quarter_button.text = "ADVANCE QUARTER"
+	primary_button.disabled = not start_project_available
 	apply_compute_plan_button.disabled = not business_actions_enabled
+	advance_quarter_button.disabled = (
+		not business_actions_enabled
+		or start_project_available
+	)
 	training_units_spin_box.editable = business_actions_enabled
 	cash_explanation_label.text = view_model.get_cash_explanation_text()
 	revenue_contribution_label.text = view_model.get_revenue_contributions_text()

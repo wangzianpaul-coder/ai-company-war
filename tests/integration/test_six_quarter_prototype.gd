@@ -168,9 +168,21 @@ static func validate_dashboard_report_history_scene(
 	var apply_button: Button = main_instance.get_node_or_null(
 		NodePath("%s/ComputePlanControls/ApplyComputePlanButton" % prefix)
 	) as Button
+	var advance_button: Button = main_instance.get_node_or_null(
+		NodePath("%s/ComputePlanControls/AdvanceQuarterButton" % prefix)
+	) as Button
 	var primary_button: Button = main_instance.get_node_or_null(
 		NodePath("%s/PrimaryButton" % prefix)
 	) as Button
+	var title_label: Label = main_instance.get_node_or_null(
+		NodePath("%s/Header/TitleLabel" % prefix)
+	) as Label
+	var date_label: Label = main_instance.get_node_or_null(
+		NodePath("%s/Header/DateLabel" % prefix)
+	) as Label
+	var header_separator: HSeparator = main_instance.get_node_or_null(
+		NodePath("%s/HeaderSeparator" % prefix)
+	) as HSeparator
 	var status_label: Label = main_instance.get_node_or_null(
 		NodePath("%s/PrototypeReportBar/PrototypeStatusLabel" % prefix)
 	) as Label
@@ -201,10 +213,17 @@ static func validate_dashboard_report_history_scene(
 	var report_bar: HBoxContainer = main_instance.get_node_or_null(
 		NodePath("%s/PrototypeReportBar" % prefix)
 	) as HBoxContainer
+	var body_spacer: Control = main_instance.get_node_or_null(
+		NodePath("%s/BodySpacer" % prefix)
+	) as Control
 	var required_nodes: Array = [
 		training_spin_box,
 		apply_button,
+		advance_button,
 		primary_button,
+		title_label,
+		date_label,
+		header_separator,
 		status_label,
 		selected_label,
 		previous_button,
@@ -215,6 +234,7 @@ static func validate_dashboard_report_history_scene(
 		detail_label,
 		report_heading,
 		report_bar,
+		body_spacer,
 	]
 	for required_node in required_nodes:
 		if required_node == null:
@@ -238,7 +258,7 @@ static func validate_dashboard_report_history_scene(
 				!= "Prototype quarter: %d/6" % (quarter_number - 1)
 		):
 			return false
-		primary_button.pressed.emit()
+		advance_button.pressed.emit()
 		await main_instance.get_tree().process_frame
 		if (
 			selected_label.text != "Quarter Report — Q%d" % quarter_number
@@ -250,8 +270,16 @@ static func validate_dashboard_report_history_scene(
 		status_label.text == "Prototype complete: 6/6"
 		and selected_label.text == "Quarter Report — Q6"
 		and not detail_scroll.visible
+		and primary_button.text == "START PROJECT"
+		and primary_button.is_visible_in_tree()
 		and primary_button.disabled
+		and apply_button.text == "SET COMPUTE ALLOCATION"
+		and apply_button.is_visible_in_tree()
 		and apply_button.disabled
+		and advance_button.text == "ADVANCE QUARTER"
+		and advance_button.is_visible_in_tree()
+		and advance_button.disabled
+		and training_spin_box.is_visible_in_tree()
 		and not training_spin_box.editable
 		and details_button.text == "DETAILS"
 	)
@@ -260,6 +288,12 @@ static func validate_dashboard_report_history_scene(
 	var committed_business_surface: Array = _dashboard_business_surface(
 		main_instance
 	)
+	primary_button.pressed.emit()
+	apply_button.pressed.emit()
+	advance_button.pressed.emit()
+	await main_instance.get_tree().process_frame
+	if _dashboard_business_surface(main_instance) != committed_business_surface:
+		return false
 
 	for quarter_number in range(5, 0, -1):
 		previous_button.pressed.emit()
@@ -316,6 +350,13 @@ static func validate_dashboard_report_history_scene(
 		return false
 
 	var report_controls: Array[Control] = [
+		title_label,
+		date_label,
+		header_separator,
+		training_spin_box,
+		apply_button,
+		advance_button,
+		primary_button,
 		report_heading,
 		report_bar,
 		status_label,
@@ -325,10 +366,14 @@ static func validate_dashboard_report_history_scene(
 		details_button,
 		summary_label,
 		detail_scroll,
+		body_spacer,
 	]
-	for resolution in [Vector2i(1280, 720), Vector2i(1920, 1080)]:
+	for resolution in [
+		Vector2i(1152, 648),
+		Vector2i(1280, 720),
+		Vector2i(1920, 1080),
+	]:
 		viewport.size = resolution
-		main_instance.size = Vector2(resolution.x, resolution.y)
 		await main_instance.get_tree().process_frame
 		await main_instance.get_tree().process_frame
 		if not _report_layout_fits(main_instance, report_controls, resolution):
@@ -1088,16 +1133,31 @@ static func _dashboard_business_surface(main_instance: Control) -> Array:
 	var apply_button: Button = main_instance.get_node_or_null(
 		^"DashboardMargin/Dashboard/ComputePlanControls/ApplyComputePlanButton"
 	) as Button
+	var advance_button: Button = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/ComputePlanControls/AdvanceQuarterButton"
+	) as Button
 	var spin_box: SpinBox = main_instance.get_node_or_null(
 		^"DashboardMargin/Dashboard/ComputePlanControls/TrainingUnitsSpinBox"
 	) as SpinBox
-	if primary_button == null or apply_button == null or spin_box == null:
+	if (
+		primary_button == null
+		or apply_button == null
+		or advance_button == null
+		or spin_box == null
+	):
 		return []
 	surface.append_array([
 		primary_button.text,
 		primary_button.disabled,
+		primary_button.is_visible_in_tree(),
+		apply_button.text,
 		apply_button.disabled,
+		apply_button.is_visible_in_tree(),
+		advance_button.text,
+		advance_button.disabled,
+		advance_button.is_visible_in_tree(),
 		spin_box.editable,
+		spin_box.is_visible_in_tree(),
 		int(spin_box.value),
 		int(spin_box.max_value),
 	])
@@ -1147,31 +1207,106 @@ static func _report_layout_fits(
 	report_controls: Array[Control],
 	resolution: Vector2i
 ) -> bool:
-	var viewport_rect: Rect2 = Rect2(
-		Vector2.ZERO,
-		Vector2(resolution.x, resolution.y)
-	)
+	var viewport: Viewport = main_instance.get_viewport()
+	if viewport == null or not viewport is Window:
+		return false
+	var window: Window = viewport as Window
+	var viewport_rect: Rect2 = viewport.get_visible_rect()
 	if (
-		main_instance.get_global_rect().size
-			!= Vector2(resolution.x, resolution.y)
+		window.size != resolution
+		or window.content_scale_size != Vector2i(1152, 648)
+		or viewport_rect.size != Vector2(1152, 648)
+		or not main_instance.is_visible_in_tree()
+		or main_instance.get_global_rect().size
+			!= viewport_rect.size
 		or not viewport_rect.encloses(main_instance.get_global_rect())
 	):
 		return false
 	for control in report_controls:
 		if (
 			control == null
-			or not control.visible
+			or not control.is_visible_in_tree()
 			or not viewport_rect.encloses(control.get_global_rect())
 		):
 			return false
+	var dashboard: VBoxContainer = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard"
+	) as VBoxContainer
+	var header: HBoxContainer = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/Header"
+	) as HBoxContainer
+	var title_label: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/Header/TitleLabel"
+	) as Label
+	var date_label: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/Header/DateLabel"
+	) as Label
+	var header_separator: HSeparator = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/HeaderSeparator"
+	) as HSeparator
 	var detail_scroll: ScrollContainer = main_instance.get_node_or_null(
 		^"DashboardMargin/Dashboard/ReportDetailScroll"
 	) as ScrollContainer
+	var detail_label: Label = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/ReportDetailScroll/ReportDetailLabel"
+	) as Label
+	var body_spacer: Control = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/BodySpacer"
+	) as Control
+	if (
+		dashboard == null
+		or header == null
+		or title_label == null
+		or date_label == null
+		or header_separator == null
+		or detail_scroll == null
+		or detail_label == null
+		or body_spacer == null
+	):
+		return false
+	var main_rect: Rect2 = main_instance.get_global_rect()
+	var dashboard_rect: Rect2 = dashboard.get_global_rect()
+	var top_safe_gap: float = dashboard_rect.position.y - main_rect.position.y
+	var bottom_safe_gap: float = (
+		main_rect.position.y + main_rect.size.y
+		- dashboard_rect.position.y - dashboard_rect.size.y
+	)
+	var header_rect: Rect2 = header.get_global_rect()
+	var title_font: Font = title_label.get_theme_font(&"font")
+	var date_font: Font = date_label.get_theme_font(&"font")
+	var required_header_height: float = maxf(
+		title_font.get_height(title_label.get_theme_font_size(&"font_size")),
+		date_font.get_height(date_label.get_theme_font_size(&"font_size"))
+	) + 8.0
+	var detail_rect: Rect2 = detail_scroll.get_global_rect()
+	var body_spacer_rect: Rect2 = body_spacer.get_global_rect()
+	if (
+		top_safe_gap < 8.0
+		or bottom_safe_gap < 8.0
+		or not header_rect.encloses(title_label.get_global_rect())
+		or not header_rect.encloses(date_label.get_global_rect())
+		or header_rect.size.y < required_header_height
+		or header_separator.get_global_rect().position.y
+			< header_rect.position.y + header_rect.size.y
+		or not detail_scroll.clip_contents
+		or body_spacer_rect.size.y < 8.0
+		or body_spacer_rect.position.y < detail_rect.position.y + detail_rect.size.y
+		or detail_rect.position.y + detail_rect.size.y + 8.0
+			> dashboard_rect.position.y + dashboard_rect.size.y
+	):
+		return false
+	if detail_label.get_combined_minimum_size().y > detail_rect.size.y:
+		var vertical_scroll_bar: VScrollBar = detail_scroll.get_v_scroll_bar()
+		if (
+			vertical_scroll_bar == null
+			or not vertical_scroll_bar.is_visible_in_tree()
+			or vertical_scroll_bar.max_value <= vertical_scroll_bar.page
+		):
+			return false
 	return (
-		detail_scroll != null
-		and detail_scroll.visible
-		and detail_scroll.size.y >= 72.0
-		and detail_scroll.size.y < float(resolution.y)
+		detail_scroll.is_visible_in_tree()
+		and detail_scroll.size.y >= 60.0
+		and detail_scroll.size.y < viewport_rect.size.y
 	)
 
 

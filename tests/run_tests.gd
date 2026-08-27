@@ -388,6 +388,9 @@ func _run_tests() -> void:
 	var apply_compute_plan_button: Button = main_instance.get_node_or_null(
 		^"DashboardMargin/Dashboard/ComputePlanControls/ApplyComputePlanButton"
 	) as Button
+	var advance_quarter_button: Button = main_instance.get_node_or_null(
+		^"DashboardMargin/Dashboard/ComputePlanControls/AdvanceQuarterButton"
+	) as Button
 	var markets_heading: Label = main_instance.get_node_or_null(
 		^"DashboardMargin/Dashboard/MarketsHeading"
 	) as Label
@@ -504,6 +507,8 @@ func _run_tests() -> void:
 		and project_label.text == "Project: project_alpha — NOT STARTED 0/3"
 		and primary_button != null
 		and primary_button.text == "START PROJECT"
+		and primary_button.is_visible_in_tree()
+		and not primary_button.disabled
 	)
 	_check(initial_scene_exact, "Dashboard initial fixed G1 fields are exact")
 	var initial_compute_exact: bool = (
@@ -519,8 +524,16 @@ func _run_tests() -> void:
 		and training_units_spin_box != null
 		and int(training_units_spin_box.value) == 40
 		and int(training_units_spin_box.max_value) == 90
+		and training_units_spin_box.is_visible_in_tree()
+		and training_units_spin_box.editable
 		and apply_compute_plan_button != null
-		and apply_compute_plan_button.text == "APPLY COMPUTE PLAN"
+		and apply_compute_plan_button.text == "SET COMPUTE ALLOCATION"
+		and apply_compute_plan_button.is_visible_in_tree()
+		and not apply_compute_plan_button.disabled
+		and advance_quarter_button != null
+		and advance_quarter_button.text == "ADVANCE QUARTER"
+		and advance_quarter_button.is_visible_in_tree()
+		and advance_quarter_button.disabled
 		and training_work_label != null
 		and training_work_label.text == "Training work: 0 compute-unit-months"
 		and inference_served_label != null
@@ -589,7 +602,13 @@ func _run_tests() -> void:
 		and project_label != null
 		and project_label.text == "Project: project_alpha — ACTIVE 0/3"
 		and primary_button != null
-		and primary_button.text == "NEXT QUARTER"
+		and primary_button.text == "START PROJECT"
+		and primary_button.disabled
+		and apply_compute_plan_button != null
+		and not apply_compute_plan_button.disabled
+		and advance_quarter_button != null
+		and advance_quarter_button.text == "ADVANCE QUARTER"
+		and not advance_quarter_button.disabled
 	)
 	var first_press_market_exact: bool = (
 		consumer_market_label != null
@@ -616,8 +635,8 @@ func _run_tests() -> void:
 	)
 	_check(first_press_exact, "First press starts only the fixed project")
 
-	if primary_button != null:
-		primary_button.pressed.emit()
+	if advance_quarter_button != null:
+		advance_quarter_button.pressed.emit()
 	await process_frame
 	var final_scene_exact: bool = (
 		date_label != null
@@ -631,7 +650,13 @@ func _run_tests() -> void:
 		and project_label != null
 		and project_label.text == "Project: project_alpha — COMPLETED 3/3"
 		and primary_button != null
-		and primary_button.text == "NEXT QUARTER"
+		and primary_button.text == "START PROJECT"
+		and primary_button.disabled
+		and apply_compute_plan_button != null
+		and not apply_compute_plan_button.disabled
+		and advance_quarter_button != null
+		and advance_quarter_button.text == "ADVANCE QUARTER"
+		and not advance_quarter_button.disabled
 		and cash_explanation_label != null
 		and cash_explanation_label.text
 			== "Cash: 1,000,000 → 1,071,130 = +71,130 cents"
@@ -738,6 +763,7 @@ func _run_tests() -> void:
 		training_units_spin_box,
 		compute_plan_spacer,
 		apply_compute_plan_button,
+		advance_quarter_button,
 		markets_heading,
 		consumer_market_label,
 		developer_api_market_label,
@@ -772,7 +798,6 @@ func _run_tests() -> void:
 		body_spacer,
 	]
 	root.size = Vector2i(1280, 720)
-	(main_instance as Control).size = Vector2(1280, 720)
 	await process_frame
 	await process_frame
 	var fits_1280: bool = _dashboard_fits(
@@ -783,7 +808,6 @@ func _run_tests() -> void:
 		Vector2i(1280, 720)
 	)
 	root.size = Vector2i(1920, 1080)
-	(main_instance as Control).size = Vector2(1920, 1080)
 	await process_frame
 	await process_frame
 	var fits_1920: bool = _dashboard_fits(
@@ -829,10 +853,28 @@ func _dashboard_fits(
 	if main_control == null or dashboard_margin == null or dashboard == null:
 		print("[LAYOUT] Missing root layout node at %dx%d" % [resolution.x, resolution.y])
 		return false
-	var viewport_rect: Rect2 = Rect2(
-		Vector2.ZERO,
-		Vector2(resolution.x, resolution.y)
-	)
+	var viewport: Viewport = main_control.get_viewport()
+	if viewport == null:
+		print("[LAYOUT] Missing viewport at %dx%d" % [resolution.x, resolution.y])
+		return false
+	if not viewport is Window:
+		print("[LAYOUT] Root viewport is not a Window at %dx%d" % [resolution.x, resolution.y])
+		return false
+	var window: Window = viewport as Window
+	var viewport_rect: Rect2 = viewport.get_visible_rect()
+	if (
+		window.size != resolution
+		or window.content_scale_size != Vector2i(1152, 648)
+		or viewport_rect.size != Vector2(1152, 648)
+	):
+		print("[LAYOUT] Physical/logical viewport mismatch at %dx%d: window=%s base=%s visible=%s" % [
+			resolution.x,
+			resolution.y,
+			window.size,
+			window.content_scale_size,
+			viewport_rect,
+		])
+		return false
 	var main_rect: Rect2 = main_control.get_global_rect()
 	var margin_rect: Rect2 = dashboard_margin.get_global_rect()
 	if not viewport_rect.encloses(main_rect) or not viewport_rect.encloses(margin_rect):
@@ -852,18 +894,20 @@ func _dashboard_fits(
 					child_control.get_combined_minimum_size(),
 				])
 		return false
-	if main_rect.size != Vector2(resolution.x, resolution.y):
-		print("[LAYOUT] Main size failed at %dx%d: %s" % [
+	if main_rect.size != viewport_rect.size:
+		print("[LAYOUT] Main logical size failed at %dx%d: main=%s visible=%s" % [
 			resolution.x,
 			resolution.y,
 			main_rect.size,
+			viewport_rect.size,
 		])
 		return false
-	if margin_rect.size != Vector2(resolution.x, resolution.y):
-		print("[LAYOUT] Margin size failed at %dx%d: %s" % [
+	if margin_rect.size != viewport_rect.size:
+		print("[LAYOUT] Margin logical size failed at %dx%d: margin=%s visible=%s" % [
 			resolution.x,
 			resolution.y,
 			margin_rect.size,
+			viewport_rect.size,
 		])
 		return false
 	if not viewport_rect.encloses(dashboard.get_global_rect()):
@@ -886,11 +930,24 @@ func _dashboard_fits(
 			dashboard_minimum,
 		])
 		return false
+	var top_safe_gap: float = dashboard_rect.position.y - main_rect.position.y
+	var bottom_safe_gap: float = (
+		main_rect.position.y + main_rect.size.y
+		- dashboard_rect.position.y - dashboard_rect.size.y
+	)
+	if top_safe_gap < 8.0 or bottom_safe_gap < 8.0:
+		print("[LAYOUT] Dashboard safe area failed at %dx%d: top=%s bottom=%s" % [
+			resolution.x,
+			resolution.y,
+			top_safe_gap,
+			bottom_safe_gap,
+		])
+		return false
 	for control in visible_controls:
 		if control == null:
 			print("[LAYOUT] Missing visible control at %dx%d" % [resolution.x, resolution.y])
 			return false
-		if not control.visible:
+		if not control.is_visible_in_tree():
 			print("[LAYOUT] Hidden control at %dx%d: %s" % [
 				resolution.x,
 				resolution.y,
@@ -922,6 +979,85 @@ func _dashboard_fits(
 				control.name,
 				rect,
 				minimum,
+			])
+			return false
+	var header: HBoxContainer = main_control.get_node_or_null(
+		^"DashboardMargin/Dashboard/Header"
+	) as HBoxContainer
+	var title: Label = main_control.get_node_or_null(
+		^"DashboardMargin/Dashboard/Header/TitleLabel"
+	) as Label
+	var date: Label = main_control.get_node_or_null(
+		^"DashboardMargin/Dashboard/Header/DateLabel"
+	) as Label
+	var separator: HSeparator = main_control.get_node_or_null(
+		^"DashboardMargin/Dashboard/HeaderSeparator"
+	) as HSeparator
+	var detail_scroll: ScrollContainer = main_control.get_node_or_null(
+		^"DashboardMargin/Dashboard/ReportDetailScroll"
+	) as ScrollContainer
+	var detail_label: Label = main_control.get_node_or_null(
+		^"DashboardMargin/Dashboard/ReportDetailScroll/ReportDetailLabel"
+	) as Label
+	var bottom_spacer: Control = main_control.get_node_or_null(
+		^"DashboardMargin/Dashboard/BodySpacer"
+	) as Control
+	if (
+		header == null
+		or title == null
+		or date == null
+		or separator == null
+		or detail_scroll == null
+		or detail_label == null
+		or bottom_spacer == null
+	):
+		print("[LAYOUT] Missing safe-area control at %dx%d" % [resolution.x, resolution.y])
+		return false
+	var header_rect: Rect2 = header.get_global_rect()
+	var title_font: Font = title.get_theme_font(&"font")
+	var date_font: Font = date.get_theme_font(&"font")
+	var required_header_height: float = maxf(
+		title_font.get_height(title.get_theme_font_size(&"font_size")),
+		date_font.get_height(date.get_theme_font_size(&"font_size"))
+	) + 8.0
+	if (
+		not header_rect.encloses(title.get_global_rect())
+		or not header_rect.encloses(date.get_global_rect())
+		or header_rect.size.y < required_header_height
+		or separator.get_global_rect().position.y
+			< header_rect.position.y + header_rect.size.y
+	):
+		print("[LAYOUT] Header glyph safety failed at %dx%d: header=%s title=%s date=%s separator_y=%s required_height=%s" % [
+			resolution.x,
+			resolution.y,
+			header_rect,
+			title.get_global_rect(),
+			date.get_global_rect(),
+			separator.get_global_rect().position.y,
+			required_header_height,
+		])
+		return false
+	var detail_rect: Rect2 = detail_scroll.get_global_rect()
+	var spacer_rect: Rect2 = bottom_spacer.get_global_rect()
+	if (
+		not detail_scroll.clip_contents
+		or spacer_rect.size.y < 8.0
+		or spacer_rect.position.y < detail_rect.position.y + detail_rect.size.y
+		or detail_rect.position.y + detail_rect.size.y + 8.0
+			> dashboard_rect.position.y + dashboard_rect.size.y
+	):
+		print("[LAYOUT] Report bottom safety failed at %dx%d" % [resolution.x, resolution.y])
+		return false
+	if detail_label.get_combined_minimum_size().y > detail_rect.size.y:
+		var vertical_scroll_bar: VScrollBar = detail_scroll.get_v_scroll_bar()
+		if (
+			vertical_scroll_bar == null
+			or not vertical_scroll_bar.is_visible_in_tree()
+			or vertical_scroll_bar.max_value <= vertical_scroll_bar.page
+		):
+			print("[LAYOUT] Report overflow is not scrollable at %dx%d" % [
+				resolution.x,
+				resolution.y,
 			])
 			return false
 	for first_index in visible_controls.size():

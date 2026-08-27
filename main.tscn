@@ -4,7 +4,7 @@
 [ext_resource type="Script" path="res://ui/screens/dashboard.gd" id="2_dashboard"]
 
 [sub_resource type="Theme" id="Theme_compact_dashboard"]
-default_font_size = 13
+default_font_size = 12
 
 [node name="Main" type="Control" unique_id=189007909]
 layout_mode = 3
@@ -33,9 +33,9 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/margin_left = 64
-theme_override_constants/margin_top = 4
+theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 64
-theme_override_constants/margin_bottom = 4
+theme_override_constants/margin_bottom = 8
 
 [node name="Dashboard" type="VBoxContainer" parent="DashboardMargin"]
 layout_mode = 2
@@ -44,12 +44,14 @@ theme_override_constants/separation = 1
 script = ExtResource("2_dashboard")
 
 [node name="Header" type="HBoxContainer" parent="DashboardMargin/Dashboard"]
+custom_minimum_size = Vector2(0, 36)
 layout_mode = 2
 
 [node name="TitleLabel" type="Label" parent="DashboardMargin/Dashboard/Header"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 20
 text = "AI COMPANY WAR"
+vertical_alignment = 1
 
 [node name="HeaderSpacer" type="Control" parent="DashboardMargin/Dashboard/Header"]
 layout_mode = 2
@@ -57,7 +59,7 @@ size_flags_horizontal = 3
 
 [node name="DateLabel" type="Label" parent="DashboardMargin/Dashboard/Header"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 16
 text = "2026 Q1"
 vertical_alignment = 1
 
@@ -66,7 +68,7 @@ layout_mode = 2
 
 [node name="CompanyHeading" type="Label" parent="DashboardMargin/Dashboard"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 12
 text = "COMPANY"
 
 [node name="FinanceGrid" type="GridContainer" parent="DashboardMargin/Dashboard"]
@@ -90,7 +92,7 @@ text = "Monthly operating cost: 80,000 cents"
 
 [node name="ComputeHeading" type="Label" parent="DashboardMargin/Dashboard"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 12
 text = "COMPUTE"
 
 [node name="ComputePlanLabel" type="Label" parent="DashboardMargin/Dashboard"]
@@ -127,11 +129,17 @@ size_flags_horizontal = 3
 [node name="ApplyComputePlanButton" type="Button" parent="DashboardMargin/Dashboard/ComputePlanControls"]
 custom_minimum_size = Vector2(220, 32)
 layout_mode = 2
-text = "APPLY COMPUTE PLAN"
+text = "SET COMPUTE ALLOCATION"
+
+[node name="AdvanceQuarterButton" type="Button" parent="DashboardMargin/Dashboard/ComputePlanControls"]
+custom_minimum_size = Vector2(180, 32)
+layout_mode = 2
+disabled = true
+text = "ADVANCE QUARTER"
 
 [node name="MarketsHeading" type="Label" parent="DashboardMargin/Dashboard"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 12
 text = "MARKETS"
 
 [node name="MarketsGrid" type="GridContainer" parent="DashboardMargin/Dashboard"]
@@ -153,7 +161,7 @@ autowrap_mode = 2
 
 [node name="RivalHeading" type="Label" parent="DashboardMargin/Dashboard"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 12
 text = "RIVAL"
 
 [node name="RivalGrid" type="GridContainer" parent="DashboardMargin/Dashboard"]
@@ -200,7 +208,7 @@ autowrap_mode = 2
 
 [node name="ProjectHeading" type="Label" parent="DashboardMargin/Dashboard"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 12
 text = "PROJECT"
 
 [node name="ProjectLabel" type="Label" parent="DashboardMargin/Dashboard"]
@@ -208,13 +216,13 @@ layout_mode = 2
 text = "Project: project_alpha — NOT STARTED 0/3"
 
 [node name="PrimaryButton" type="Button" parent="DashboardMargin/Dashboard"]
-custom_minimum_size = Vector2(0, 36)
+custom_minimum_size = Vector2(0, 32)
 layout_mode = 2
 text = "START PROJECT"
 
 [node name="ExplanationHeading" type="Label" parent="DashboardMargin/Dashboard"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 12
 text = "QUARTER EXPLANATION"
 
 [node name="Explanation" type="GridContainer" parent="DashboardMargin/Dashboard"]
@@ -288,7 +296,7 @@ size_flags_horizontal = 3
 
 [node name="PrototypeHeading" type="Label" parent="DashboardMargin/Dashboard"]
 layout_mode = 2
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 12
 text = "PROTOTYPE / QUARTER REPORT"
 
 [node name="PrototypeReportBar" type="HBoxContainer" parent="DashboardMargin/Dashboard"]
@@ -336,9 +344,10 @@ autowrap_mode = 2
 
 [node name="ReportDetailScroll" type="ScrollContainer" parent="DashboardMargin/Dashboard"]
 visible = false
-custom_minimum_size = Vector2(0, 72)
+custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
-size_flags_vertical = 3
+size_flags_vertical = 1
+clip_contents = true
 
 [node name="ReportDetailLabel" type="Label" parent="DashboardMargin/Dashboard/ReportDetailScroll"]
 layout_mode = 2
@@ -347,5 +356,6 @@ text = ""
 autowrap_mode = 2
 
 [node name="BodySpacer" type="Control" parent="DashboardMargin/Dashboard"]
+custom_minimum_size = Vector2(0, 8)
 layout_mode = 2
 size_flags_vertical = 3
